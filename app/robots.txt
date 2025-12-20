@@ -1,0 +1,13 @@
+# app/robots.txt
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://vakilyab.com/sitemap.xml
+
+# برای محدود کردن دسترسی به مسیرهای خاص
+Disallow: /api/
+Disallow: /_next/
+Disallow: /admin/
+Disallow: /profile/
+Disallow: /dashboard/
