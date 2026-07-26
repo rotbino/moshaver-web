@@ -1,141 +1,174 @@
 // components/common/FileUploader.tsx
+'use client';
 
-import React, { useRef, useState, useCallback, useEffect } from "react";
-import { UploadCloud, X } from "lucide-react";
-import { getMainFilePath } from "@/lib/utils/utils";
+import React, { useRef, useState, useEffect } from 'react';
+import { UploadCloud, X, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { cn } from '@/lib/utils/utils';
+import { useDeleteFile } from '@/lib/api/apiHooks';
 
-export interface SimpleFileUploaderProps {
+interface FileUploaderProps {
     width?: number;
     height?: number;
     className?: string;
     accept?: string;
     label?: string;
+    model?: 'User' | 'Business' | 'Ad';
+    modelId?: string;
+    fieldKey?: string;
     value?: string | null;
+    onFileSelect: (file: File | null) => void;
+    onRemove?: () => void;
+    onSuccess?: (fileId: string) => void;
+    onError?: (error: string) => void;
     disabled?: boolean;
     showPreview?: boolean;
     rounded?: boolean;
-    onFileSelect: (file: File | null) => void;
+    showDeleteBtn?: boolean;
+    error?: string;
 }
 
-const FileUploader: React.FC<SimpleFileUploaderProps> = ({
-                                                             width = 200,
-                                                             height = 200,
-                                                             className = "",
-                                                             accept = "image/*",
-                                                             label = "انتخاب فایل",
-                                                             value,
-                                                             disabled = false,
-                                                             showPreview = true,
-                                                             rounded = true,
-                                                             onFileSelect,
-                                                         }) => {
+export function FileUploader({
+                                 width = 120,
+                                 height = 120,
+                                 className = '',
+                                 accept = 'image/*',
+                                 label = 'انتخاب فایل',
+                                 model,
+                                 modelId,
+                                 fieldKey,
+                                 value,
+                                 onFileSelect,
+                                 onRemove,
+                                 onSuccess,
+                                 onError,
+                                 disabled = false,
+                                 showPreview = true,
+                                 rounded = true,
+                                 error,
+                                 showDeleteBtn = false,
+                             }: FileUploaderProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const [preview, setPreview] = useState<string | null>(null);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [preview, setPreview] = useState<string | null>(null);
+    const [currentFileId, setCurrentFileId] = useState<string | null>(value || null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
-    // به‌روزرسانی پیش‌نمایش هنگام تغییر value
+    const deleteMutation = useDeleteFile();
+
     useEffect(() => {
-        if (value) {
-            setPreview(getMainFilePath(value));
-        } else if (!selectedFile) {
-            setPreview(null);
-        }
-    }, [value, selectedFile]);
+        setCurrentFileId(value || null);
+    }, [value]);
 
-    // ایجاد پیش‌نمایش برای فایل انتخاب شده
-    const createPreview = useCallback((file: File) => {
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setSelectedFile(file);
+        setCurrentFileId(null);
+        setPreview(null);
+
         const reader = new FileReader();
         reader.onloadend = () => {
             setPreview(reader.result as string);
         };
         reader.readAsDataURL(file);
-    }, []);
 
-    // انتخاب فایل از سیستم
-    const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-        if (disabled) return;
-
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        setSelectedFile(file);
         onFileSelect(file);
+    };
 
-        if (showPreview) {
-            createPreview(file);
+    const handleClear = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+
+        if (currentFileId && model && modelId && fieldKey) {
+            setIsDeleting(true);
+            try {
+                await deleteMutation.mutateAsync(currentFileId);
+                console.log('🗑️ File deleted from server:', currentFileId);
+            } catch (error) {
+                console.warn('⚠️ Could not delete file from server:', error);
+            } finally {
+                setIsDeleting(false);
+            }
         }
-    }, [disabled, onFileSelect, showPreview, createPreview]);
+
+        setSelectedFile(null);
+        setPreview(null);
+        setCurrentFileId(null);
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+        onFileSelect(null);
+        onRemove?.();
+    };
 
     const triggerFileSelect = () => {
-        if (disabled) return;
+        if (disabled || isDeleting) return;
         fileInputRef.current?.click();
     };
 
-    const handleClearFile = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        setSelectedFile(null);
-        setPreview(null);
-        onFileSelect(null);
-        if (fileInputRef.current) {
-            fileInputRef.current.value = "";
-        }
-    };
+    const displayPreview = preview || (currentFileId ? `${process.env.NEXT_PUBLIC_API_BASE_URL}/file/${currentFileId}` : null);
+    const hasFile = !!displayPreview || !!selectedFile;
+    const isError = !!error;
 
     return (
-        <div className={`relative ${className}`}>
+        <div className={cn("flex flex-col items-center gap-2", className)}>
             <div
-                className={`bg-white shadow-md ${rounded ? 'rounded-full' : ''} flex flex-col items-center justify-center p-2 relative overflow-hidden border-2 border-dashed border-gray-300 hover:border-gray-400 
-                transition-colors ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                className={cn(
+                    "relative overflow-hidden border-2 border-dashed transition-all",
+                    rounded ? 'rounded-full' : 'rounded-lg',
+                    disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:border-gray-400',
+                    isError ? 'border-red-500 bg-red-50' : 'border-gray-300',
+                    hasFile ? 'border-green-500' : '',
+                    isDeleting ? 'border-yellow-400 bg-yellow-50' : ''
+                )}
                 style={{ width, height }}
                 onClick={triggerFileSelect}
             >
-                {/* ورودی فایل همیشه در DOM وجود دارد */}
                 <input
                     type="file"
                     accept={accept}
                     ref={fileInputRef}
                     className="hidden"
-                    onChange={handleFileChange}
-                    disabled={disabled}
+                    onChange={handleFileSelect}
+                    disabled={disabled || isDeleting}
                 />
 
-                {/* نمایش پیش‌نمایش */}
-                {preview ? (
-                    <div className="w-full h-full">
-                        {showPreview ? (
-                            <img
-                                src={preview}
-                                alt="Preview"
-                                className={`w-full h-full ${rounded ? 'rounded-full' : ''} object-cover`}
-                            />
-                        ) : (
-                            <div className="flex flex-col items-center justify-center w-full h-full">
-                                <span className="text-xs text-gray-500 text-center px-2">
-                                    {selectedFile?.name || 'فایل انتخاب شده'}
-                                </span>
-                            </div>
+                {isDeleting ? (
+                    <div className="w-full h-full flex items-center justify-center bg-yellow-50">
+                        <Loader2 className="w-8 h-8 text-yellow-500 animate-spin" />
+                    </div>
+                ) : displayPreview ? (
+                    <div className="w-full h-full relative">
+                        <img
+                            src={displayPreview}
+                            alt="Preview"
+                            className={cn(
+                                "w-full h-full object-cover",
+                                rounded ? 'rounded-full' : 'rounded-lg'
+                            )}
+                        />
+                        {!disabled && !isDeleting && showDeleteBtn && (
+                            <button
+                                type="button"
+                                className="absolute top-2 left-2 bg-white rounded-full p-1 shadow-md hover:bg-red-100 transition-colors"
+                                onClick={handleClear}
+                                disabled={isDeleting}
+                            >
+                                <X size={16} className="text-red-500" />
+                            </button>
                         )}
                     </div>
                 ) : (
-                    <div className="flex flex-col items-center justify-center text-gray-400 p-4">
+                    <div className="flex flex-col items-center justify-center text-gray-400 p-4 w-full h-full">
                         <UploadCloud size={32} />
                         <span className="text-xs mt-1 text-center">{label}</span>
                     </div>
                 )}
-
-                {/* دکمه حذف ضربدر */}
-                {preview && !disabled && (
-                    <button
-                        type="button"
-                        className="absolute top-3 right-3 bg-white rounded-full p-1 shadow-md hover:bg-red-100 transition-colors"
-                        onClick={handleClearFile}
-                    >
-                        <X size={16} className="text-red-500" />
-                    </button>
-                )}
             </div>
+
+            {error && (
+                <span className="text-xs text-red-500">{error}</span>
+            )}
         </div>
     );
-};
-
-export default FileUploader;
+}

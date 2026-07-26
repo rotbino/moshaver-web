@@ -1,221 +1,348 @@
+// app/login/page.tsx
 'use client';
 
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/radix/card';
-import { Button } from '@/components/radix/button';
-import { FloatingLabel } from '@/components/common';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useDispatch } from 'react-redux';
 import Link from 'next/link';
-import { Phone, Lock, User, Shield, Eye, EyeOff } from 'lucide-react';
-import { toast } from '@/lib/hooks/app-toast';
-import { useAuth } from '@/lib/data-transfer/api-hooks';
-import { store } from '@/lib/store/store';
-import { setAccessToken, setRefreshToken, setUser } from '@/lib/store/slices/authSlice';
-import {UserProfile} from "@/lib/data-transfer/types";
+import { Eye, EyeOff, ArrowLeft, Phone, Shield } from 'lucide-react';
+import { toast } from 'sonner';
+import { setUser, setAccessToken } from '@/lib/store/slices/authSlice';
+import { useLogin, useRegister } from '@/lib/api/apiHooks';
+import { AppFooter } from '@/app/components';
+import { apiService } from '@/lib/api/apiService';
+import {API_BASE, getApiUrl} from '@/lib/api/apiRequest';
 
 export default function LoginPage() {
     const router = useRouter();
-    const [mobile, setMobile] = useState('');
+    const searchParams = useSearchParams();
+    const dispatch = useDispatch();
+
+    const [step, setStep] = useState<'phone' | 'password'>('phone');
+    const [phone, setPhone] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
+    const [isLoading, setIsLoading] = useState(false);
 
-    const { useLogin } = useAuth();
     const loginMutation = useLogin();
+    const registerMutation = useRegister();
 
-    const validateForm = () => {
+    const armSlug = searchParams.get('arm') || 'barton';
+    const redirectTo = searchParams.get('redirect') || '/profile';
+
+    const validatePhone = () => {
         const newErrors: Record<string, string> = {};
-
-        if (!mobile) {
-            newErrors.mobile = "شماره موبایل را وارد کنید";
-        } else if (!/^09[0-9]{9}$/.test(mobile)) {
-            newErrors.mobile = "شماره موبایل معتبر نیست";
+        if (!phone) {
+            newErrors.phone = 'شماره موبایل الزامی است';
+        } else if (!/^09[0-9]{9}$/.test(phone)) {
+            newErrors.phone = 'شماره موبایل معتبر نیست';
         }
-
-        if (!password) {
-            newErrors.password = "رمز عبور را وارد کنید";
-        } else if (password.length < 6) {
-            newErrors.password = "رمز عبور باید حداقل 6 کاراکتر باشد";
-        }
-
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handlePhoneSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!validatePhone()) return;
 
-        if (!validateForm()) return;
+        setIsLoading(true);
 
         try {
-            const response = await loginMutation.mutateAsync({ mobile, password });
-            // ساخت آبجکت UserProfile از پاسخ دریافتی
-            const userProfile: UserProfile = {
-                user: response.user,
-                account: response.account,
-                subscription: response.subscription,
-                userDashboard: response.userDashboard,
-                lawyerDashboard: response.lawyerDashboard
-            };
+            // ۱. بررسی شماره موبایل با API
+            const checkResponse = await fetch(getApiUrl('/auth/check-phone'), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ phone }),
+            });
 
-            // ذخیره توکن‌ها و اطلاعات کاربر در Redux
-            store.dispatch(setAccessToken(response.tokens.accessToken));
-            store.dispatch(setRefreshToken(response.tokens.refreshToken));
-            store.dispatch(setUser(userProfile));
-
-            toast.success("ورود با موفقیت انجام شد");
-
-            // هدایت به داشبورد مناسب بر اساس نقش کاربر
-            setTimeout(() => {
-                if (response.user.role === 'LAWYER') {
-                    router.push('/lawyer-dashboard');
-                } else {
-                    router.push('/user-dashboard');
-                }
-            }, 100);
-        } catch (error: any) {
-            console.error('Login failed:', error);
-
-            // نمایش خطای مناسب به کاربر
-            if (error.message) {
-                toast.error(error.message || "خطا در ورود به سیستم");
-            } else {
-                toast.error("شماره موبایل یا رمز عبور اشتباه است");
+            if (!checkResponse.ok) {
+                throw new Error('خطا در بررسی شماره موبایل');
             }
+
+            const checkResult = await checkResponse.json();
+
+            if (checkResult.exists) {
+                // ✅ شماره وجود دارد → برو به مرحله پسورد
+                setStep('password');
+                setIsLoading(false);
+                return;
+            }
+
+            // ✅ شماره وجود ندارد → ثبت‌نام جدید
+            try {
+                const registerResponse = await registerMutation.mutateAsync({
+                    phone,
+                    password: '123456',
+                });
+
+                dispatch(setUser(registerResponse.user));
+                dispatch(setAccessToken(registerResponse.access_token));
+
+                // عضویت در بازار
+                if (armSlug) {
+                    try {
+                        await apiService.arm.join(armSlug);
+                        toast.success(`با موفقیت در بازار عضو شدید`);
+                    } catch (error: any) {
+                        if (error?.data?.errorCode !== 'ALREADY_MEMBER') {
+                            console.error('Join error:', error);
+                        }
+                    }
+                }
+
+                toast.success('ثبت‌نام با موفقیت انجام شد');
+                router.push("/profile");
+                return;
+            } catch (registerError: any) {
+                if (registerError?.data?.errorCode === 'DUPLICATE_PHONE') {
+                    toast.error('این شماره موبایل قبلاً ثبت شده است');
+                } else {
+                    toast.error(registerError?.message || 'خطا در ثبت‌نام');
+                }
+                setIsLoading(false);
+                return;
+            }
+        } catch (error: any) {
+            console.error('Check phone error:', error);
+            toast.error(error?.message || 'خطا در بررسی شماره موبایل');
+            setIsLoading(false);
+        } finally {
+            setIsLoading(false);
         }
     };
 
-    const togglePasswordVisibility = () => {
-        setShowPassword(!showPassword);
+    const handlePasswordSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!password) {
+            setErrors({ password: 'رمز عبور الزامی است' });
+            return;
+        }
+        if (password.length < 4) {
+            setErrors({ password: 'رمز عبور حداقل ۴ کاراکتر است' });
+            return;
+        }
+
+        setIsLoading(true);
+
+        try {
+            const loginResponse = await loginMutation.mutateAsync({
+                phone,
+                password,
+            });
+
+            dispatch(setUser(loginResponse.user));
+            dispatch(setAccessToken(loginResponse.access_token));
+
+            if (armSlug) {
+                try {
+                    await apiService.arm.join(armSlug);
+                } catch (error: any) {
+                    if (error?.data?.errorCode !== 'ALREADY_MEMBER') {
+                        console.error('Join error:', error);
+                    }
+                }
+            }
+
+            toast.success('خوش آمدید');
+            router.push("/profile");
+        } catch (error: any) {
+            if (error?.data?.errorCode === 'WRONG_CREDENTIALS') {
+                setErrors({ password: 'رمز عبور اشتباه است' });
+            } else {
+                toast.error(error?.message || 'خطا در ورود');
+            }
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center py-8 px-4">
-            <div className="w-full max-w-md">
-                {/* Header */}
-                <div className="text-center mb-8">
-                    <h1 className="text-3xl font-bold text-[#ca2a30] mb-2">ورود به وکیل‌یاب</h1>
-                    <p className="text-gray-600">به حساب کاربری خود وارد شوید</p>
+        <div className="min-h-screen flex flex-col bg-background">
+            {/* هدر */}
+            <header className="bg-surface w-full fixed top-0 left-0 right-0 z-50 border-b border-outline-variant flex justify-between items-center px-4 h-16">
+                <div className="flex items-center gap-3">
+                    {step === 'password' && (
+                        <button
+                            onClick={() => setStep('phone')}
+                            className="flex items-center justify-center w-10 h-10 text-on-surface-variant hover:text-primary transition-colors active:scale-95"
+                        >
+                            <ArrowLeft className="w-6 h-6" />
+                        </button>
+                    )}
+                    <div className="flex flex-col text-right">
+                        <span className="font-headline-sm text-headline-sm text-on-surface leading-tight">
+                            {step === 'phone' ? 'ورود / عضویت' : 'ورود'}
+                        </span>
+                        <span className="text-[10px] text-on-surface-variant leading-tight">
+                            {step === 'phone' ? 'شماره موبایل خود را وارد کنید' : 'رمز عبور خود را وارد کنید'}
+                        </span>
+                    </div>
                 </div>
+                <div className="flex items-center gap-2">
+                    <span className="font-mono-data font-bold text-[10px] text-on-surface-variant tracking-widest uppercase">
+                        SARNAKH
+                    </span>
+                </div>
+            </header>
 
-                {/* Form Card */}
-                <Card className="mb-6">
-                    <CardContent className="p-6">
-                        <div className="text-center mb-6">
-                            <div className="w-16 h-16 bg-[#ca2a30]/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <Shield className="w-8 h-8 text-[#ca2a30]" />
+            <main className="flex-1 w-full flex items-center justify-center px-4 pt-24 pb-20">
+                <div className="w-full max-w-[480px]">
+                    {/* مرحله اول: شماره موبایل */}
+                    {step === 'phone' ? (
+                        <form onSubmit={handlePhoneSubmit} className="space-y-6">
+                            <div className="text-right mb-8">
+                                <h2 className="font-headline-md text-headline-md text-on-surface">
+                                    خوش آمدید
+                                </h2>
+                                <p className="text-body-md text-on-surface-variant mt-1">
+                                    شماره موبایل خود را وارد کنید
+                                </p>
                             </div>
-                            <h2 className="text-xl font-semibold">ورود به حساب کاربری</h2>
-                            <p className="text-sm text-gray-600 mt-1">
-                                شماره موبایل و رمز عبور خود را وارد کنید
-                            </p>
-                        </div>
 
-                        {errors.form && (
-                            <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-md text-sm">
-                                {errors.form}
-                            </div>
-                        )}
-
-                        <form onSubmit={handleSubmit} className="space-y-4">
-                            <FloatingLabel
-                                id="mobile"
-                                label="شماره موبایل"
-                                icon={<Phone className="w-6 h-6 text-gray-400"/>}
-                            >
-                                <input
-                                    type="tel"
-                                    value={mobile}
-                                    onChange={(e) => setMobile(e.target.value)}
-                                    placeholder="09123456789"
-                                    className={errors.mobile ? "border-red-500" : ""}
-                                />
-                            </FloatingLabel>
-                            {errors.mobile && <p className="text-red-500 text-sm mt-1">{errors.mobile}</p>}
-                            <div className="relative">
-                                <FloatingLabel
-                                    id="password"
-                                    label="رمز عبور"
-                                    icon={<Lock className="w-6 h-6 text-gray-400"/>}
-                                >
-
+                            <div className="flex flex-col gap-2">
+                                <label className="font-label-md text-label-md text-on-surface-variant flex items-center gap-1">
+                                    شماره موبایل
+                                    <span className="text-primary">*</span>
+                                </label>
+                                <div className="relative">
                                     <input
-                                        type={showPassword ? "text" : "password"}
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                        placeholder="••••••••"
-                                        className={errors.password ? "border-red-500" : ""}
+                                        type="tel"
+                                        dir="ltr"
+                                        inputMode="numeric"
+                                        pattern="[0-9]*"
+                                        value={phone}
+                                        onChange={(e) => {
+                                            // فقط عدد و حداکثر ۱۱ رقم
+                                            const value = e.target.value.replace(/\D/g, '').slice(0, 11);
+                                            setPhone(value);
+                                            if (errors.phone) setErrors({ ...errors, phone: undefined });
+                                        }}
+                                        placeholder="09123456789"
+                                        maxLength={11}
+                                        className={`w-full bg-surface-container-lowest border h-14 px-4 pr-12 font-mono-data text-right focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all ${
+                                            errors.phone ? 'border-error' : 'border-outline'
+                                        }`}
                                     />
+                                    <div className="absolute inset-y-0 left-4 flex items-center text-on-surface-variant opacity-60">
+                                        <Phone className="w-5 h-5" />
+                                    </div>
+                                </div>
+                                {errors.phone && <p className="text-error text-sm mt-1">{errors.phone}</p>}
+                            </div>
 
-                                </FloatingLabel>
+                            <button
+                                type="submit"
+                                disabled={isLoading}
+                                className="w-full bg-primary text-on-primary h-14 font-headline-sm text-headline-sm flex items-center justify-center gap-2 active:scale-95 transition-transform duration-150"
+                            >
+                                {isLoading ? (
+                                    'در حال بررسی...'
+                                ) : (
+                                    <>
+                                        تایید
+                                    </>
+                                )}
+                            </button>
+
+                            <div className="text-center text-xs text-on-surface-variant">
+                                با ادامه، با <Link href="/terms" className="text-primary hover:underline">قوانین</Link> موافقت می‌کنید
+                            </div>
+                        </form>
+                    ) : (
+                        /* مرحله دوم: پسورد */
+                        <form onSubmit={handlePasswordSubmit} className="space-y-6">
+                            <div className="text-right mb-8">
+                                <h2 className="font-headline-md text-headline-md text-on-surface">
+                                    خوش آمدید
+                                </h2>
+                                <p className="text-body-md text-on-surface-variant mt-1">
+                                    برای {phone}، رمز عبور خود را وارد کنید
+                                </p>
+                            </div>
+
+                            <div className="flex flex-col gap-2">
+                                <label className="font-label-md text-label-md text-on-surface-variant flex items-center gap-1">
+                                    رمز عبور
+                                    <span className="text-primary">*</span>
+                                </label>
+                                <div className="relative">
+                                    <input
+                                        type={showPassword ? 'text' : 'password'}
+                                        dir="ltr"
+                                        value={password}
+                                        onChange={(e) => {
+                                            setPassword(e.target.value);
+                                            if (errors.password) setErrors({ ...errors, password: undefined });
+                                        }}
+                                        placeholder="••••••"
+                                        className={`w-full bg-surface-container-lowest border h-14 px-4 pr-12 font-mono-data text-right focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all ${
+                                            errors.password ? 'border-error' : 'border-outline'
+                                        }`}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary transition-colors"
+                                    >
+                                        {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                                    </button>
+                                </div>
+                                {errors.password && <p className="text-error text-sm mt-1">{errors.password}</p>}
+                            </div>
+
+                            <div className="flex items-center justify-between">
                                 <button
                                     type="button"
-                                    onClick={togglePasswordVisibility}
-                                    className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                    onClick={() => {
+                                        const supportPhone = '09123456789';
+                                        if (window.innerWidth < 768) {
+                                            window.location.href = `tel:${supportPhone}`;
+                                        } else {
+                                            toast.info(`شماره پشتیبانی: ${supportPhone}`);
+                                        }
+                                    }}
+                                    className="text-sm text-primary hover:underline transition-colors flex items-center gap-1"
                                 >
-                                    {showPassword ? <EyeOff className="w-5 h-5"/> : <Eye className="w-5 h-5"/>}
+                                    <Shield className="w-4 h-4" />
+                                    رمز را فراموش کرده‌اید؟
                                 </button>
-                            </div>
-                            {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password}</p>}
-
-                            {/* لینک فراموشی رمز عبور */}
-                            <div className="text-left">
                                 <Link
-                                    href="/forgot-password"
-                                    className="text-sm text-[#ca2a30] hover:underline"
+                                    href="/login"
+                                    className="text-sm text-on-surface-variant hover:text-primary transition-colors"
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        setStep('phone');
+                                        setPassword('');
+                                        setErrors({});
+                                    }}
                                 >
-                                    رمز عبور خود را فراموش کرده‌اید؟
+                                    شماره دیگری
                                 </Link>
                             </div>
 
-                            <Button
+                            <button
                                 type="submit"
-                                className="w-full bg-[#ca2a30] hover:bg-[#b02529]"
-                                disabled={loginMutation.isPending}
+                                disabled={isLoading}
+                                className="w-full bg-primary text-on-primary h-14 font-headline-sm text-headline-sm flex items-center justify-center gap-2 active:scale-95 transition-transform duration-150"
                             >
-                                {loginMutation.isPending ? 'در حال ورود...' : 'ورود'}
-                            </Button>
+                                {isLoading ? (
+                                    'در حال ورود...'
+                                ) : (
+                                    <>
+                                        ورود
+                                        <ArrowLeft className="w-5 h-5" />
+                                    </>
+                                )}
+                            </button>
                         </form>
-
-                        {/* Development Tools */}
-                        {process.env.NODE_ENV === 'development' && (
-                            <div className="mt-6 pt-4 border-t border-gray-200">
-                                <div className="text-xs text-gray-500 mb-2">ابزار توسعه:</div>
-                                <div className="flex flex-col gap-2">
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setMobile('09196421264'); // شماره وکیل (احمد محمدی)
-                                            setPassword('111111');
-                                        }}
-                                        className="text-xs bg-gray-100 hover:bg-gray-200 p-2 rounded text-left"
-                                    >
-                                        پر کردن فرم با داده‌های تست (وکیل)
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setMobile('09144133782'); // شماره کاربر عادی (علی احمدی)
-                                            setPassword('111111');
-                                        }}
-                                        className="text-xs bg-gray-100 hover:bg-gray-200 p-2 rounded text-left"
-                                    >
-                                        پر کردن فرم با داده‌های تست (کاربر)
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
-
-                {/* Register Link */}
-                <div className="text-center text-sm text-gray-600">
-                    حساب کاربری ندارید؟{' '}
-                    <Link href="/register" className="text-[#ca2a30] hover:underline font-medium">
-                        ثبت‌نام کنید
-                    </Link>
+                    )}
                 </div>
-            </div>
+            </main>
+
+            <AppFooter />
         </div>
     );
 }

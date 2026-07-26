@@ -1,32 +1,30 @@
 // lib/store/store.ts
 import { configureStore } from '@reduxjs/toolkit';
 import { persistStore, persistReducer } from 'redux-persist';
-import storage from './storage';
+import storage from 'redux-persist/lib/storage';
 import authReducer from './slices/authSlice';
-import locationReducer from './slices/locationSlice'; // افزودن اسلایس مکان
-
-// پیکربندی persist برای auth slice
+import armReducer from './slices/armSlice'; // ✅ import از فایل جدید
+import themeReducer from './slices/themeSlice';
 const authPersistConfig = {
     key: 'auth',
     storage,
-    whitelist: ['user', 'isAuthenticated', 'accessToken','refreshToken'],
+    whitelist: ['user', 'isAuthenticated', 'accessToken', 'refreshToken'],
 };
 
-// پیکربندی persist برای location slice
-const locationPersistConfig = {
-    key: 'location',
+const armPersistConfig = {
+    key: 'arm',
     storage,
-    whitelist: ['province', 'city'],
+    whitelist: ['currentSlug', 'currentArm'],
 };
 
-// ایجاد reducer با قابلیت persist
 const persistedAuthReducer = persistReducer(authPersistConfig, authReducer);
-const persistedLocationReducer = persistReducer(locationPersistConfig, locationReducer);
+const persistedArmReducer = persistReducer(armPersistConfig, armReducer);
 
 export const store = configureStore({
     reducer: {
         auth: persistedAuthReducer,
-        location: persistedLocationReducer, // افزودن اسلایس مکان
+        arm: persistedArmReducer,
+        theme: themeReducer,
     },
     middleware: (getDefaultMiddleware) =>
         getDefaultMiddleware({
@@ -37,6 +35,5 @@ export const store = configureStore({
 });
 
 export const persistor = persistStore(store);
-
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;

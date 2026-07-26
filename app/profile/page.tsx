@@ -1,350 +1,410 @@
 // app/profile/page.tsx
-
 'use client';
 
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/radix/card';
-import { Button } from '@/components/radix/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/radix/tabs';
-import { User, Briefcase, Mail, Phone, MapPin, Edit, Calendar, Star, Award, LogOut } from 'lucide-react';
-import { useProfile, useAuth, useLogout } from '@/lib/data-service/hooks';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { toast } from '@/lib/hooks/app-toast';
-import { ApiError, UserRole, Lawyer, Specialty, Skill } from '@/lib/data-service/types';
-import Link from "next/link";
-import { specialtyTitles, skillTitles } from "@/lib/data-service/mockData";
-import Image from 'next/image';
+import { useSelector, useDispatch } from 'react-redux';
+import { RootState } from '@/lib/store/store';
+import { useActiveBusiness, useCreditBalance } from '@/lib/api/apiHooks';
+import { AppHeader, AppFooter } from '@/app/components';
+import { setUser } from '@/lib/store/slices/authSlice';
+import { EditProfileModal } from '@/app/profile/components/EditProfileModal';
+import { RefreshModal } from '@/app/ad/RefreshModal';
+import { EditModal } from '@/app/ad/EditModal';
+import {
+    User, Building2, Package, PlusCircle, Edit, CreditCard,
+    Factory, AlertTriangle, Key, BadgeCheck, RefreshCw, Pencil,
+    Phone, MapPin, Briefcase, Award, Shield, Sparkles,
+    Tag, Clock, TrendingUp, Store, ChevronLeft, Layers,
+} from 'lucide-react';
+import { ChangePasswordModal } from '@/app/register/ChangePasswordModal';
+import { getApiUrl } from '@/lib/api/apiRequest';
+import { toast } from 'sonner';
+import { VerificationModal } from '../business/VerificationModal';
+import { cn } from '@/lib/utils';
+import { ManagedArmsList } from "./components/ManagedArmsList";
+import { apiService } from '@/lib/api/apiService';
+
 export default function ProfilePage() {
-  const router = useRouter();
-  const { user, isAuthenticated } = useAuth();
-  const logoutMutation = useLogout();
-  const { data: profile, isLoading, error } = useProfile(user.id);
+    const router = useRouter();
+    const dispatch = useDispatch();
+    const { user } = useSelector((state: RootState) => state.auth);
+    const { data: business, isLoading, refetch } = useActiveBusiness();
+    const { data: creditBalance, refetch: refetchBalance } = useCreditBalance();
 
-  // تابع کمکی برای دریافت عنوان تخصص
-  const getSpecialtyTitle = (specialty: Specialty) => {
-    return specialtyTitles.find(s => s.id === specialty)?.title || specialty;
-  };
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+    const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false);
+    const [selectedAd, setSelectedAd] = useState<any>(null);
+    const [isRefreshModalOpen, setIsRefreshModalOpen] = useState(false);
+    const [isEditAdModalOpen, setIsEditAdModalOpen] = useState(false);
 
-  // تابع کمکی برای دریافت عنوان مهارت
-  const getSkillTitle = (skill: Skill) => {
-    return skillTitles.find(s => s.id === skill)?.title || skill;
-  };
+    const hasTemporaryPassword = user?.temporaryPassword === true;
+    const hasBusiness = !!business;
+    const logoUrl = business?.logoUrl ? getApiUrl(`/file/${business.logoUrl}`) : null;
+    const avatarUrl = user?.avatarFileId ? getApiUrl(`/file/${user.avatarFileId}`) : null;
 
-  // آپلود تصویر پروفایل
-  const handleImageUpload = async (file: File) => {
-    try {
-      // در محیط توسعه، فقط شبیه‌سازی می‌کنیم
-      toast.success("تصویر پروفایل با موفقیت آپلود شد");
-      // در واقعیت اینجا باید از useUploadProfileImage استفاده شود
-    } catch (err: any) {
-      toast.error(err.message || "خطا در آپلود تصویر پروفایل");
+    const handleProfileUpdate = async (data: { fullName: string; avatarUrl?: string; password?: string }) => {
+        try {
+            const updatedUser = await apiService.auth.updateProfile({ fullName: data.fullName });
+            dispatch(setUser({ ...user, fullName: updatedUser.fullName, avatarFileId: data.avatarUrl ? data.avatarUrl : user?.avatarFileId, temporaryPassword: data.password ? false : user?.temporaryPassword }));
+            await refetch(); await refetchBalance();
+            toast.success('پروفایل با موفقیت به‌روزرسانی شد');
+        } catch (error: any) { toast.error(error?.message || 'خطا در به‌روزرسانی پروفایل'); }
+    };
+
+    const handlePasswordChange = async () => {
+        dispatch(setUser({ ...user, temporaryPassword: false }));
+        await refetch();
+    };
+
+    useEffect(() => { if (!isLoading) { refetch(); refetchBalance(); } }, []);
+
+    const totalAds = business?.ads?.length || 0;
+    const activeAds = business?.ads?.filter((ad: any) => ad.status === 'active').length || 0;
+    const expiredAds = totalAds - activeAds;
+
+    if (isLoading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-background">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto" />
+            </div>
+        );
     }
-  };
 
-  // حذف تصویر پروفایل
-  const handleImageDelete = (fileId: string) => {
-    try {
-      // در محیط توسعه، فقط شبیه‌سازی می‌کنیم
-      toast.success("تصویر پروفایل با موفقیت حذف شد");
-      // در واقعیت اینجا باید از یک هوک برای حذف فایل استفاده شود
-    } catch (err: any) {
-      toast.error(err.message || "خطا در حذف تصویر پروفایل");
-    }
-  };
-
-  // خروج از حساب کاربری
-  const handleLogout = () => {
-    logoutMutation.mutate(undefined, {
-      onSuccess: () => {
-        toast.success("خروج از حساب کاربری با موفقیت انجام شد");
-        router.push('/login');
-      },
-      onError: (error: ApiError) => {
-        toast.error(error.message || "خطا در خروج از حساب کاربری");
-      }
-    });
-  };
-
-  if (isLoading) {
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center py-8 px-4">
-          <div className="text-center">
-            <div className="w-16 h-16 bg-[#ca2a30]/10 rounded-full flex items-center justify-center mx-auto mb-4">
-              <User className="w-8 h-8 text-[#ca2a30] animate-pulse" />
-            </div>
-            <p className="text-gray-600">در حال بارگذاری اطلاعات پروفایل...</p>
-          </div>
-        </div>
-    );
-  }
+        <div className="min-h-screen bg-gradient-to-br from-surface via-surface to-surface-container-low/30">
+            <AppHeader />
 
-  if (error || !profile) {
-    return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center py-8 px-4">
-          <div className="text-center">
-            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <User className="w-8 h-8 text-red-500" />
-            </div>
-            <p className="text-gray-600">خطا در بارگذاری اطلاعات پروفایل</p>
-            <Button
-                onClick={() => router.push('/dashboard')}
-                className="mt-4 bg-[#ca2a30] hover:bg-[#b02529]"
-            >
-              بازگشت به داشبورد
-            </Button>
-          </div>
-        </div>
-    );
-  }
+            <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pt-6 pb-24">
 
-  const isLawyer = profile.role === UserRole.LAWYER;
-  const lawyerProfile = profile as Lawyer;
+                {/* ═══════════════ هشدار رمز موقت ═══════════════ */}
+                {hasTemporaryPassword && (
+                    <div className="bg-gradient-to-r from-error/10 via-error/5 to-error/10 border-2 border-error/50 rounded-2xl p-4 mb-6 flex flex-col sm:flex-row items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-error/20 flex items-center justify-center flex-shrink-0"><Key className="w-5 h-5 text-error" /></div>
+                            <div>
+                                <p className="text-sm font-bold text-error">رمز عبور موقت شما ۱۲۳۴۵۶ است</p>
+                                <p className="text-xs text-on-surface-variant">برای امنیت بیشتر، لطفاً رمز عبور خود را تغییر دهید</p>
+                            </div>
+                        </div>
+                        <div className="flex gap-2 w-full sm:w-auto">
+                            <button onClick={() => setIsPasswordModalOpen(true)} className="flex-1 sm:flex-none bg-error text-white px-5 py-2 text-sm font-medium hover:bg-error/90 rounded-lg flex items-center justify-center gap-2"><Key className="w-4 h-4" />تغییر رمز</button>
+                            <button onClick={() => setIsEditModalOpen(true)} className="flex-1 sm:flex-none bg-surface border border-outline text-on-surface px-4 py-2 text-sm hover:bg-surface-container-low rounded-lg">ویرایش پروفایل</button>
+                        </div>
+                    </div>
+                )}
 
-  return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8 px-4">
-        <div className="max-w-4xl mx-auto">
-          {/* Header */}
-          <div className="mb-8 flex justify-between items-center">
-            <div>
-              <h1 className="text-2xl font-bold text-[#ca2a30] mb-2">پروفایل کاربری</h1>
+                {/* ═══════════════ دسکتاپ: دو ستونه ═══════════════ */}
+                <div className="hidden lg:grid lg:grid-cols-3 gap-6 mb-8">
 
-            </div>
+                    {/* ستون چپ: پروفایل + اطلاعات */}
+                    <div className="lg:col-span-1 space-y-6">
+                        {/* کارت پروفایل */}
+                        <div className="bg-white rounded-2xl border border-outline-variant/50 p-6 shadow-sm">
+                            <div className="flex flex-col items-center text-center">
+                                <div className="relative mb-4">
+                                    <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center border-4 border-primary/20 overflow-hidden">
+                                        {avatarUrl ? (
+                                            <img src={avatarUrl} alt={user?.fullName || 'کاربر'} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <User className="w-12 h-12 text-primary" />
+                                        )}
+                                    </div>
+                                    <button onClick={() => setIsEditModalOpen(true)} className="absolute -bottom-1 -right-1 bg-primary text-white p-1.5 rounded-full shadow-lg hover:bg-primary/90 transition-colors">
+                                        <Pencil className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+                                <h1 className="text-lg font-bold text-on-surface">{user?.fullName && user.fullName !== '' && user.fullName !== 'کاربر مهمان' ? user.fullName : 'بی‌نام'}</h1>
+                                <p className="text-sm text-on-surface-variant mt-1">{user?.phone || ''}</p>
+                                {hasBusiness && (
+                                    <span className="inline-flex items-center gap-1 mt-3 px-3 py-1 bg-primary/10 text-primary text-xs rounded-full font-medium">
+                                        <Store className="w-3 h-3" />
+                                        {business.type === 'wholesaler' ? 'عمده‌فروش' : 'خریدار'}
+                                    </span>
+                                )}
+                            </div>
+                        </div>
 
-            {/* Logout Button */}
-            <Button
-                variant="outline"
-                onClick={handleLogout}
-                disabled={logoutMutation.isPending}
-                className="flex items-center gap-2"
-            >
-              <LogOut className="w-4 h-4" />
-              {logoutMutation.isPending ? 'در حال خروج...' : 'خروج از حساب'}
-            </Button>
-          </div>
+                        {/* کیف اعتبار */}
+                        <div className="bg-white rounded-2xl border border-outline-variant/50 p-5 shadow-sm">
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-2">
+                                    <CreditCard className="w-5 h-5 text-primary" />
+                                    <h3 className="text-sm font-semibold">کیف اعتبار</h3>
+                                </div>
+                                <button onClick={() => router.push('/credit/purchase')} className="text-primary hover:text-primary/80"><PlusCircle className="w-5 h-5" /></button>
+                            </div>
+                            <div className="flex items-baseline gap-1">
+                                <span className="text-3xl font-bold text-primary">{creditBalance?.balance?.toLocaleString() || 0}</span>
+                                <span className="text-xs text-on-surface-variant">اعتبار</span>
+                            </div>
+                        </div>
 
-          {/* Profile Card */}
-          <Card className="mb-6">
-            <CardContent className="p-6">
-              <div className="flex flex-col md:flex-row gap-6">
-                {/* Profile Image */}
-                <div className="flex-shrink-0">
-                  <div className="relative">
-                    <Image
-                        src={profile.profileImage}
-                        alt="Profile"
-                        width={150}
-                        height={150}
-                    />
-                  </div>
+                        {/* نکات */}
+                        <div className="space-y-3">
+                            {[
+                                { icon: Sparkles, text: 'قیمت‌های جدیدتر در شرایط مشابه، بالاتر قرار می‌گیرند.' },
+                                { icon: AlertTriangle, text: 'درج قیمت‌های غیر واقعی موجب امتیاز منفی خواهد شد.' },
+                                { icon: Package, text: 'برای هر کالا می‌توانید چند قیمت با حداقل خرید متفاوت ثبت کنید.' },
+                                { icon: TrendingUp, text: '۵ آگهی رایگان روی تابلو. اعتبار فقط برای نردبان.' },
+                            ].map((tip, i) => (
+                                <div key={i} className="bg-white rounded-xl border border-outline-variant/30 p-3 flex items-start gap-2.5 shadow-sm">
+                                    <tip.icon className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                                    <p className="text-xs text-on-surface leading-relaxed">{tip.text}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* ستون راست: کسب‌وکار + آگهی‌ها + بازارها */}
+                    <div className="lg:col-span-2 space-y-6">
+
+                        {/* کسب‌وکار یا دعوت به ثبت */}
+                        {!hasBusiness ? (
+                            <div className="bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 border-2 border-primary/30 rounded-2xl p-6">
+                                <div className="flex items-center justify-between gap-4">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center"><Factory className="w-6 h-6 text-primary" /></div>
+                                        <div>
+                                            <h3 className="text-base font-semibold">شروع فعالیت صنعتی</h3>
+                                            <p className="text-sm text-on-surface-variant">کسب و کار خود را در یک دقیقه ثبت کنید.</p>
+                                        </div>
+                                    </div>
+                                    <button onClick={() => router.push('/business/register')} className="px-6 py-2.5 bg-primary text-on-primary rounded-xl text-sm font-medium">ثبت کسب‌وکار</button>
+                                </div>
+                            </div>
+                        ) : (
+                            <>
+                                {/* کارت کسب‌وکار */}
+                                <div className="bg-white rounded-2xl border border-outline-variant/50 p-5 shadow-sm">
+                                    <div className="flex items-start gap-4">
+                                        <div className="w-16 h-16 rounded-xl bg-surface-container-high border border-outline flex items-center justify-center overflow-hidden flex-shrink-0">
+                                            {logoUrl ? <img src={logoUrl} alt={business.name} className="w-full h-full object-cover" /> : <Building2 className="w-8 h-8 text-primary" />}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <h2 className="text-lg font-semibold truncate">{business.name}</h2>
+                                                {business.verificationTier !== 'none' && (
+                                                    <span className="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full flex items-center gap-1"><BadgeCheck className="w-3 h-3" />تأیید شده</span>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center gap-3 mt-1 text-sm text-on-surface-variant">
+                                                {business.city && <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" />{business.city}</span>}
+                                                {business.phone && <span className="flex items-center gap-1"><Phone className="w-3.5 h-3.5" />{business.phone}</span>}
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button onClick={() => router.push(`/business/edit/${business.id}`)} className="px-4 py-2 bg-primary/10 text-primary rounded-lg text-xs font-medium hover:bg-primary/20"><Edit className="w-4 h-4 inline ml-1" />ویرایش</button>
+                                            <button onClick={() => setIsVerificationModalOpen(true)} className="px-4 py-2 border border-outline rounded-lg text-xs hover:bg-surface-container-low"><Shield className="w-4 h-4 inline ml-1" />تیک اعتماد</button>
+                                        </div>
+                                    </div>
+                                    {/* آمار */}
+                                    <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-outline-variant/50">
+                                        {[
+                                            { value: totalAds, label: 'کل آگهی‌ها', color: 'text-primary' },
+                                            { value: activeAds, label: 'فعال', color: 'text-green-600' },
+                                            { value: expiredAds, label: 'منقضی', color: 'text-warning' },
+                                        ].map(s => (
+                                            <div key={s.label} className="text-center">
+                                                <p className={cn("text-2xl font-bold", s.color)}>{s.value}</p>
+                                                <p className="text-[10px] text-on-surface-variant">{s.label}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* آگهی‌ها */}
+                                <div>
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h3 className="text-base font-semibold flex items-center gap-2">آگهی‌های من <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">{totalAds}</span></h3>
+                                        <button onClick={() => router.push('/ad/create')} className="text-sm text-primary hover:underline flex items-center gap-1"><PlusCircle className="w-4 h-4" />جدید</button>
+                                    </div>
+
+                                    {totalAds === 0 ? (
+                                        <div className="bg-white rounded-2xl border border-outline-variant/50 p-8 text-center">
+                                            <Package className="w-12 h-12 text-on-surface-variant/30 mx-auto mb-3" />
+                                            <p className="text-sm text-on-surface-variant">هنوز آگهی ثبت نکرده‌اید</p>
+                                            <button onClick={() => router.push('/ad/create')} className="mt-4 px-6 py-2 bg-primary text-on-primary rounded-lg text-sm">ثبت اولین آگهی</button>
+                                        </div>
+                                    ) : (
+                                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+                                            {business.ads.map((ad: any) => (
+                                                <div key={ad.id} className="bg-white rounded-xl border border-outline-variant/50 p-4 shadow-sm hover:shadow-md transition-all">
+                                                    <div className="flex items-start justify-between">
+                                                        <div className="min-w-0">
+                                                            <h4 className="font-semibold text-sm truncate">{ad.title}</h4>
+                                                            <p className="text-[10px] text-on-surface-variant">{ad.arm?.name || 'بدون بازار'}</p>
+                                                        </div>
+                                                        <div className="text-right flex-shrink-0">
+                                                            <p className="text-lg font-bold text-primary">{ad.unitPrice.toLocaleString()}</p>
+                                                            <p className="text-[9px] text-on-surface-variant">ت/{ad.unit?.shortCode || 'تن'}</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 mt-2 pt-2 border-t border-outline-variant/20 text-[10px]">
+                                                        <span className={cn("px-2 py-0.5 rounded-full", ad.status === 'active' ? "bg-green-50 text-green-600" : "bg-warning/10 text-warning")}>
+                                                            {ad.status === 'active' ? `${Math.ceil((new Date(ad.expiresAt).getTime() - Date.now()) / 86400000)} روز` : 'منقضی'}
+                                                        </span>
+                                                        {ad.isBumped && <span className="text-primary bg-primary/5 px-2 py-0.5 rounded-full">نردبان</span>}
+                                                    </div>
+                                                    <div className="flex gap-2 mt-3 pt-3 border-t border-outline-variant/20">
+                                                        {ad.status === 'active' ? (
+                                                            <>
+                                                                <button onClick={() => { setSelectedAd(ad); setIsRefreshModalOpen(true); }} className="flex-1 py-1.5 bg-primary text-white text-xs rounded-lg">تمدید</button>
+                                                                <button onClick={() => { setSelectedAd(ad); setIsEditAdModalOpen(true); }} className="px-3 py-1.5 border rounded-lg text-xs"><Pencil className="w-3.5 h-3.5" /></button>
+                                                            </>
+                                                        ) : (
+                                                            <button className="flex-1 py-1.5 border border-primary text-primary text-xs rounded-lg">انتشار مجدد</button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </>
+                        )}
+
+                        {/* بازارهای تحت مدیریت */}
+                        <ManagedArmsList onRefresh={() => refetch()} />
+                    </div>
                 </div>
 
-                {/* Profile Info */}
-                <div className="flex-grow">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between mb-4">
-                    <div>
-                      <h2 className="text-2xl font-bold">{profile.name} {profile.lastName}</h2>
-                      <p className="text-gray-600">
-                        {isLawyer ? 'وکیل دادگستری' : 'کاربر عادی'}
-                      </p>
+                {/* ═══════════════ موبایل: مثل قبل ═══════════════ */}
+                <div className="lg:hidden space-y-6">
+                    {/* کارت پروفایل */}
+                    <div className="bg-white rounded-2xl border border-outline-variant/50 p-6 shadow-sm">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+                            <div className="relative">
+                                <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center border-2 border-primary/20 overflow-hidden">
+                                    {avatarUrl ? <img src={avatarUrl} alt={user?.fullName || 'کاربر'} className="w-full h-full object-cover" /> : <User className="w-10 h-10 text-primary" />}
+                                </div>
+                                <button onClick={() => setIsEditModalOpen(true)} className="absolute -bottom-1 -right-1 bg-primary text-white p-1.5 rounded-full shadow-lg"><Pencil className="w-3.5 h-3.5" /></button>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-3">
+                                    <h1 className="text-xl font-bold truncate">{user?.fullName && user.fullName !== '' && user.fullName !== 'کاربر مهمان' ? user.fullName : 'بی‌نام'}</h1>
+                                    {hasBusiness && <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-primary/10 text-primary text-xs rounded-full"><Store className="w-3 h-3" />{business.type === 'wholesaler' ? 'عمده‌فروش' : 'خریدار'}</span>}
+                                </div>
+                                <p className="text-sm text-on-surface-variant mt-1">{user?.phone || ''}</p>
+                            </div>
+                        </div>
                     </div>
-                    <Link href="/profile/edit">
-                      <Button
-                          className="mt-2 md:mt-0 bg-[#ca2a30] hover:bg-[#b02529]"
-                      >
-                        <Edit className="w-4 h-4 ml-1" />
-                        ویرایش پروفایل
-                      </Button>
-                    </Link>
-                  </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                    <div className="flex items-center">
-                      <Mail className="w-5 h-5 text-gray-500 ml-2" />
-                      <span>{profile.email || 'ایمیل ثبت نشده'}</span>
+                    {/* کیف اعتبار */}
+                    <div className="bg-white rounded-2xl border border-outline-variant/50 p-5 shadow-sm">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <CreditCard className="w-5 h-5 text-primary" />
+                                <div><h3 className="text-sm font-semibold">کیف اعتبار</h3><p className="text-[10px] text-on-surface-variant">برای نردبان آگهی‌ها</p></div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-2xl font-bold text-primary">{creditBalance?.balance?.toLocaleString() || 0}</span>
+                                <span className="text-xs text-on-surface-variant">اعتبار</span>
+                                <button onClick={() => router.push('/credit/purchase')}><PlusCircle className="w-5 h-5 text-primary" /></button>
+                            </div>
+                        </div>
                     </div>
-                    <div className="flex items-center">
-                      <Phone className="w-5 h-5 text-gray-500 ml-2" />
-                      <span>{profile.mobile}</span>
-                    </div>
-                    {isLawyer && (
+
+                    {!hasBusiness ? (
+                        <div className="bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 border-2 border-primary/30 rounded-2xl p-6">
+                            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                                <div className="flex items-center gap-4">
+                                    <Factory className="w-6 h-6 text-primary" />
+                                    <div><h3 className="text-base font-semibold">شروع فعالیت صنعتی</h3><p className="text-sm text-on-surface-variant">کسب و کار خود را ثبت کنید.</p></div>
+                                </div>
+                                <button onClick={() => router.push('/business/register')} className="px-6 py-2.5 bg-primary text-on-primary rounded-xl text-sm">ثبت کسب‌وکار</button>
+                            </div>
+                        </div>
+                    ) : (
                         <>
-                          <div className="flex items-center">
-                            <Briefcase className="w-5 h-5 text-gray-500 ml-2" />
-                            <span>
-                              {lawyerProfile.experienceYears || 0} سال سابقه کار
-                            </span>
-                          </div>
-                          <div className="flex items-center">
-                            <Star className="w-5 h-5 text-gray-500 ml-2" />
-                            <span>
-                              {lawyerProfile.rating || 0} ({lawyerProfile.reviewsCount || 0} نظر)
-                            </span>
-                          </div>
+                            {/* کارت کسب‌وکار - موبایل */}
+                            <div className="bg-white rounded-2xl border border-outline-variant/50 p-4 shadow-sm">
+                                <div className="flex items-start gap-4">
+                                    <div className="w-16 h-16 rounded-xl bg-surface-container-high border flex items-center justify-center overflow-hidden flex-shrink-0">
+                                        {logoUrl ? <img src={logoUrl} alt={business.name} className="w-full h-full object-cover" /> : <Building2 className="w-8 h-8 text-primary" />}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <h2 className="text-lg font-semibold truncate">{business.name}</h2>
+                                        <div className="flex items-center gap-2 mt-1 text-sm text-on-surface-variant">
+                                            {business.city && <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" />{business.city}</span>}
+                                            <span className="flex items-center gap-1"><Package className="w-3.5 h-3.5" />{totalAds} آگهی</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t">
+                                    {[{ v: totalAds, l: 'کل', c: 'text-primary' }, { v: activeAds, l: 'فعال', c: 'text-green-600' }, { v: expiredAds, l: 'منقضی', c: 'text-warning' }].map(s => (
+                                        <div key={s.l} className="text-center"><p className={cn("text-xl font-bold", s.c)}>{s.v}</p><p className="text-[10px] text-on-surface-variant">{s.l}</p></div>
+                                    ))}
+                                </div>
+                                <div className="flex gap-2 mt-3 pt-3 border-t">
+                                    <button onClick={() => router.push(`/business/edit/${business.id}`)} className="flex-1 py-2 bg-primary/10 text-primary rounded-lg text-sm font-medium">ویرایش</button>
+                                    <button onClick={() => setIsVerificationModalOpen(true)} className="flex-1 py-2 border rounded-lg text-sm">تیک اعتماد</button>
+                                </div>
+                            </div>
+
+                            {/* آگهی‌ها - موبایل */}
+                            <div>
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className="text-base font-semibold flex items-center gap-2">آگهی‌های من <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">{totalAds}</span></h3>
+                                    <button onClick={() => router.push('/ad/create')} className="text-sm text-primary flex items-center gap-1"><PlusCircle className="w-4 h-4" />جدید</button>
+                                </div>
+                                {totalAds === 0 ? (
+                                    <div className="bg-white rounded-2xl border p-8 text-center"><Package className="w-12 h-12 text-on-surface-variant/30 mx-auto mb-3" /><p className="text-sm text-on-surface-variant">هنوز آگهی ثبت نکرده‌اید</p></div>
+                                ) : (
+                                    <div className="space-y-3">
+                                        {business.ads.map((ad: any) => (
+                                            <div key={ad.id} className="bg-white rounded-2xl border p-4 shadow-sm">
+                                                <div className="flex items-start justify-between">
+                                                    <div className="min-w-0"><h4 className="font-semibold text-sm truncate">{ad.title}</h4><p className="text-[10px] text-on-surface-variant">{ad.arm?.name}</p></div>
+                                                    <div className="text-right"><p className="text-lg font-bold text-primary">{ad.unitPrice.toLocaleString()}</p><p className="text-[9px] text-on-surface-variant">ت/{ad.unit?.shortCode || 'تن'}</p></div>
+                                                </div>
+                                                <div className="flex gap-2 mt-3 pt-3 border-t">
+                                                    {ad.status === 'active' ? (
+                                                        <>
+                                                            <button onClick={() => { setSelectedAd(ad); setIsRefreshModalOpen(true); }} className="flex-1 py-1.5 bg-primary text-white text-xs rounded-lg">تمدید</button>
+                                                            <button onClick={() => { setSelectedAd(ad); setIsEditAdModalOpen(true); }} className="px-3 py-1.5 border rounded-lg text-xs"><Pencil className="w-3.5 h-3.5" /></button>
+                                                        </>
+                                                    ) : (
+                                                        <button className="flex-1 py-1.5 border border-primary text-primary text-xs rounded-lg">انتشار مجدد</button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                         </>
                     )}
-                    <div className="flex items-center">
-                      <Calendar className="w-5 h-5 text-gray-500 ml-2" />
-                      <span>
-                        عضو از {new Date(profile.createdAt).toLocaleDateString('fa-IR')}
-                      </span>
+
+                    <ManagedArmsList onRefresh={() => refetch()} />
+
+                    {/* نکات - موبایل */}
+                    <div className="space-y-3">
+                        {[
+                            { icon: Sparkles, text: 'قیمت‌های جدیدتر در شرایط مشابه، بالاتر قرار می‌گیرند.' },
+                            { icon: AlertTriangle, text: 'درج قیمت‌های غیر واقعی موجب امتیاز منفی خواهد شد.' },
+                            { icon: Package, text: 'برای هر کالا می‌توانید چند قیمت با حداقل خرید متفاوت ثبت کنید.' },
+                        ].map((tip, i) => (
+                            <div key={i} className="bg-white rounded-xl border p-3 flex items-start gap-2.5 shadow-sm">
+                                <tip.icon className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                                <p className="text-xs text-on-surface leading-relaxed">{tip.text}</p>
+                            </div>
+                        ))}
                     </div>
-                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+            </main>
 
-          {/* Tabs for additional information */}
-          <Tabs dir="rtl" defaultValue="personal" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="personal">اطلاعات شخصی</TabsTrigger>
-              {isLawyer && (
-                  <TabsTrigger value="professional">اطلاعات حرفه‌ای</TabsTrigger>
-              )}
-            </TabsList>
-
-            <TabsContent value="personal" className="mt-4">
-              <Card>
-                <CardContent className="p-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <h3 className="text-lg font-semibold mb-4">اطلاعات پایه</h3>
-                      <div className="space-y-3">
-                        <div className="flex items-center">
-                          <User className="w-5 h-5 text-gray-500 ml-2" />
-                          <span>نام: {profile.name}</span>
-                        </div>
-                        <div className="flex items-center">
-                          <User className="w-5 h-5 text-gray-500 ml-2" />
-                          <span>نام خانوادگی: {profile.lastName}</span>
-                        </div>
-                        <div className="flex items-center">
-                          <Phone className="w-5 h-5 text-gray-500 ml-2" />
-                          <span>موبایل: {profile.mobile}</span>
-                        </div>
-                        {profile.email && (
-                            <div className="flex items-center">
-                              <Mail className="w-5 h-5 text-gray-500 ml-2" />
-                              <span>ایمیل: {profile.email}</span>
-                            </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {isLawyer && lawyerProfile.location && (
-                        <div>
-                          <h3 className="text-lg font-semibold mb-4">اطلاعات تماس</h3>
-                          <div className="space-y-3">
-                            <div className="flex items-center">
-                              <MapPin className="w-5 h-5 text-gray-500 ml-2" />
-                              <span>
-                                {lawyerProfile.location.province}, {lawyerProfile.location.city}
-                              </span>
-                            </div>
-                            <div className="flex items-center">
-                              <MapPin className="w-5 h-5 text-gray-500 ml-2" />
-                              <span>
-                                {lawyerProfile.location.address}
-                              </span>
-                            </div>
-                            {lawyerProfile.contact?.phone && (
-                                <div className="flex items-center">
-                                  <Phone className="w-5 h-5 text-gray-500 ml-2" />
-                                  <span>
-                                    تلفن: {lawyerProfile.contact.phone}
-                                  </span>
-                                </div>
-                            )}
-                          </div>
-                        </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {isLawyer && (
-                <TabsContent value="professional" className="mt-4">
-                  <Card>
-                    <CardContent className="p-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                          <h3 className="text-lg font-semibold mb-4">اطلاعات حرفه‌ای</h3>
-                          <div className="space-y-3">
-                            <div className="flex items-center">
-                              <Briefcase className="w-5 h-5 text-gray-500 ml-2" />
-                              <span>
-                                سابقه کار: {lawyerProfile.experienceYears} سال
-                              </span>
-                            </div>
-                            <div className="flex items-center">
-                              <Award className="w-5 h-5 text-gray-500 ml-2" />
-                              <span>
-                                پروانه وکالت: {lawyerProfile.license.type}
-                              </span>
-                            </div>
-                            <div className="flex items-center">
-                              <Award className="w-5 h-5 text-gray-500 ml-2" />
-                              <span>
-                                شماره پروانه: {lawyerProfile.license.licenseNumber}
-                              </span>
-                            </div>
-                            <div className="flex items-center">
-                              <Star className="w-5 h-5 text-gray-500 ml-2" />
-                              <span>
-                                امتیاز: {lawyerProfile.rating} ({lawyerProfile.reviewsCount} نظر)
-                              </span>
-                            </div>
-                            <div className="flex items-center">
-                              <Award className="w-5 h-5 text-gray-500 ml-2" />
-                              <span>
-                                پرونده‌های موفق: {lawyerProfile.successfulCases}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div>
-                          <h3 className="text-lg font-semibold mb-4">تخصص‌ها</h3>
-                          <div className="flex flex-wrap gap-2 mb-6">
-                            {lawyerProfile.specialties.map((specialty, index) => (
-                                <div
-                                    key={index}
-                                    className={`px-3 py-1 rounded-full text-sm ${
-                                        index === 0
-                                            ? 'bg-[#ca2a30] text-white'
-                                            : 'bg-blue-100 text-blue-800'
-                                    }`}
-                                >
-                                  {index === 0 ? 'اصلی: ' : 'فرعی: '}
-                                  {getSpecialtyTitle(specialty)}
-                                </div>
-                            ))}
-                          </div>
-
-                          <h3 className="text-lg font-semibold mb-4">مهارت‌ها</h3>
-                          <div className="flex flex-wrap gap-2">
-                            {lawyerProfile.skills.map((skill, index) => (
-                                <div key={index} className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">
-                                  {getSkillTitle(skill)}
-                                </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-
-                      {lawyerProfile.about && (
-                          <div className="mt-6">
-                            <h3 className="text-lg font-semibold mb-2">درباره من</h3>
-                            <p className="text-gray-700 leading-relaxed">{lawyerProfile.about}</p>
-                          </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </TabsContent>
+            {/* مودال‌ها */}
+            <ChangePasswordModal isOpen={isPasswordModalOpen} onClose={() => setIsPasswordModalOpen(false)} onSuccess={handlePasswordChange} />
+            {user && <EditProfileModal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} user={user} onUpdate={handleProfileUpdate} />}
+            {hasBusiness && <VerificationModal isOpen={isVerificationModalOpen} onClose={() => setIsVerificationModalOpen(false)} businessId={business?.id} businessName={business?.name} onSuccess={() => { toast.success('مدارک ارسال شد'); refetch(); refetchBalance(); }} />}
+            {selectedAd && (
+                <>
+                    <RefreshModal isOpen={isRefreshModalOpen} onClose={() => { setIsRefreshModalOpen(false); setSelectedAd(null); }} ad={selectedAd} onSuccess={() => { refetch(); refetchBalance(); }} />
+                    <EditModal isOpen={isEditAdModalOpen} onClose={() => { setIsEditAdModalOpen(false); setSelectedAd(null); }} ad={selectedAd} onSuccess={() => { refetch(); refetchBalance(); }} />
+                </>
             )}
-          </Tabs>
         </div>
-      </div>
-  );
+    );
 }

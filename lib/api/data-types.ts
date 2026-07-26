@@ -1,0 +1,53 @@
+// lib/api/data-types.ts
+
+// ============================================================
+// سمت‌های کاربر در کسب‌وکار
+// ============================================================
+export const USER_POSITIONS = [
+    { label: 'صاحب کسب‌وکار', value: '1' },
+    { label: 'مدیرعامل', value: '2' },
+    { label: 'مدیر بازرگانی', value: '3' },
+    { label: 'مدیر فروش', value: '4' },
+    { label: 'مدیر خرید', value: '5' },
+    { label: 'کارشناس فروش', value: '6' },
+    { label: 'کارشناس خرید', value: '7' },
+    { label: 'حسابدار یا امور مالی', value: '8' },
+    { label: 'سایر', value: 'sایر' },
+];
+
+// ============================================================
+// نقش‌های کاربر در بازار (فروشنده/خریدار)
+// ============================================================
+export const BUSINESS_ROLES = [
+    { label: 'فروشنده عمده', value: 'seller' },
+    { label: 'خریدار عمده', value: 'buyer' },
+];
+
+// ============================================================
+// نوع کسب‌وکار
+// ============================================================
+export const BUSINESS_TYPES = [
+    { label: 'تولیدی', value: 'producer' },
+    { label: 'عمده‌فروش', value: 'wholesaler' },
+    { label: 'واردکننده', value: 'importer' },
+    { label: 'صادرکننده', value: 'exporter' },
+    { label: 'توزیع‌کننده', value: 'distributor' },
+    { label: 'خرده‌فروش', value: 'retailer' },
+    { label: 'پیمانکار', value: 'contractor' },
+    { label: 'خدمات', value: 'service_provider' },
+    { label: 'سایر', value: 'other' },
+];
+
+// ============================================================
+// واحدهای اندازه‌گیری
+// ============================================================
+export const UNITS = [
+    { label: 'کیلوگرم', value: 'kg' },
+    { label: 'تن', value: 'ton' },
+    { label: 'عدد', value: 'piece' },
+    { label: 'متر', value: 'meter' },
+    { label: 'کیلومتر', value: 'kilometer' },
+    { label: 'لیتر', value: 'liter' },
+    { label: 'متر مربع', value: 'square_meter' },
+    { label: 'متر مکعب', value: 'cubic_meter' },
+];

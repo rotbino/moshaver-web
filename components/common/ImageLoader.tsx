@@ -5,7 +5,7 @@ import { Button } from '@/components/radix/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/radix/dialog';
 import { Trash2, ZoomIn, Loader2, ImageOff, X, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils/utils';
-import ImageView from "@/components/common/ImagePreview";
+import ImageView from "@/components/common/ImageView";
 
 
 interface ImageLoaderProps {
