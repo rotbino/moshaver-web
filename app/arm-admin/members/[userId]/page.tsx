@@ -247,7 +247,7 @@ export default function MemberDetailPage() {
         const labels: Record<string, string> = { admin: 'مدیر', seller: 'فروشنده', buyer: 'خریدار', viewer: 'بازدیدکننده' };
         return (
             <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-full border", styles[role] || styles.viewer)}>
-                {role === 'admin' && <Crown className="w-3 h-3" />}{labels[role] || role}
+                {role === 'system_admin' && <Crown className="w-3 h-3" />}{labels[role] || role}
             </span>
         );
     };

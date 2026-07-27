@@ -3,69 +3,90 @@
 
 import React, { useState } from 'react';
 import { UseFormRegister, FieldErrors, UseFormWatch, UseFormSetValue } from 'react-hook-form';
+import { useDispatch, useSelector } from 'react-redux';
+import { RootState } from '@/lib/store/store';
 import { FileUploader } from '@/components/common/FileUploader';
 import { useUploadFile } from '@/lib/api/apiHooks';
+import { setArm } from '@/lib/store/slices/armSlice';
 import { toast } from 'sonner';
-import { Loader2, Upload } from 'lucide-react';
+import { Loader2, Upload, Check, Palette, Info, Lock } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
+// ============================================================
+// 📋 Props
+// ============================================================
 interface GeneralSectionProps {
     register: UseFormRegister<any>;
     errors: FieldErrors<any>;
     watch: UseFormWatch<any>;
     setValue: UseFormSetValue<any>;
     armId?: string;
+    isSystemAdmin?: boolean;
 }
 
-
+// ============================================================
+// 🎨 پالت رنگی
+// ============================================================
 const THEME_PRESETS = [
-    {
-        id: 'crimson',
-        label: 'زرشکی',
-        primary: '#8b0000',
-        spectrum: ['#4a0000', '#8b0000', '#c62828', '#e57373', '#ffcdd2'],
-    },
-    {
-        id: 'navy',
-        label: 'سرمه‌ای',
-        primary: '#1a237e',
-        spectrum: ['#0d1137', '#1a237e', '#283593', '#5c6bc0', '#c5cae9'],
-    },
-    {
-        id: 'teal',
-        label: 'سبز دریایی',
-        primary: '#00695c',
-        spectrum: ['#003d33', '#00695c', '#00897b', '#4db6ac', '#b2dfdb'],
-    },
-    {
-        id: 'orange',
-        label: 'نارنجی',
-        primary: '#e65100',
-        spectrum: ['#7a2e00', '#e65100', '#f57c00', '#ffb74d', '#ffe0b2'],
-    },
-    {
-        id: 'purple',
-        label: 'بنفش',
-        primary: '#4a148c',
-        spectrum: ['#2a0d54', '#4a148c', '#7b1fa2', '#ba68c8', '#e1bee7'],
-    },
-    {
-        id: 'green',
-        label: 'سبز',
-        primary: '#1b5e20',
-        spectrum: ['#0d3311', '#1b5e20', '#2e7d32', '#66bb6a', '#c8e6c9'],
-    },
-    {
-        id: 'brown',
-        label: 'قهوه‌ای',
-        primary: '#4e342e',
-        spectrum: ['#2a1c18', '#4e342e', '#6d4c41', '#a1887f', '#d7ccc8'],
-    },
+    { id: 'divar-red', label: 'قرمز دیوار', category: 'صنعتی', primary: '#a11f2c', secondary: '#7a1721' },
+    { id: 'industrial-orange', label: 'صنعتی', category: 'صنعتی', primary: '#e65100', secondary: '#bf360c' },
+    { id: 'steel-blue', label: 'فولاد', category: 'صنعتی', primary: '#37474f', secondary: '#1a2327' },
+    { id: 'navy', label: 'اداری', category: 'اداری', primary: '#1a237e', secondary: '#0d1137' },
+    { id: 'teal', label: 'تجاری', category: 'اداری', primary: '#00695c', secondary: '#003d33' },
+    { id: 'forest-green', label: 'جنگلی', category: 'طبیعت', primary: '#1b5e20', secondary: '#0d3311' },
+    { id: 'earth-brown', label: 'خاکی', category: 'طبیعت', primary: '#4e342e', secondary: '#2a1c18' },
+    { id: 'deep-purple', label: 'سلطنتی', category: 'لوکس', primary: '#4a148c', secondary: '#2a0d54' },
+    { id: 'gold', label: 'طلایی', category: 'لوکس', primary: '#c79100', secondary: '#7a5a00' },
+    { id: 'rose', label: 'صورتی', category: 'مدرن', primary: '#ad1457', secondary: '#6b0833' },
+    { id: 'slate', label: 'مینیمال', category: 'مدرن', primary: '#455a64', secondary: '#1c262b' },
 ];
-export function GeneralSection({ register, errors, watch, setValue, armId }: GeneralSectionProps) {
+
+function lightenColor(hex: string, amount: number): string {
+    const num = parseInt(hex.replace('#', ''), 16);
+    const r = Math.min(255, (num >> 16) + Math.round(255 * amount));
+    const g = Math.min(255, ((num >> 8) & 0x00ff) + Math.round(255 * amount));
+    const b = Math.min(255, (num & 0x0000ff) + Math.round(255 * amount));
+    return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
+}
+
+// ============================================================
+// 🎯 کامپوننت اصلی
+// ============================================================
+export function GeneralSection({
+                                   register,
+                                   errors,
+                                   watch,
+                                   setValue,
+                                   armId,
+                                   isSystemAdmin = false,
+                               }: GeneralSectionProps) {
+    const dispatch = useDispatch();
+    const { currentArm, currentSlug } = useSelector((state: RootState) => state.arm);
     const uploadMutation = useUploadFile();
     const [isUploadingLogo, setIsUploadingLogo] = useState(false);
 
+    // گرفتن دسترسی‌ها از config
+    const armAdminPermission = watch('config.armAdminPermission') || {};
+    const generalAccess = armAdminPermission.general || {};
+
+    // اگر مدیر سیستم باشه، همه دسترسی‌ها بازه
+    const canEditSlug = isSystemAdmin || generalAccess.canEditSlug === true;
+    const canEditStatus = isSystemAdmin || generalAccess.canEditStatus === true;
+    const canEditColors = isSystemAdmin || generalAccess.canEditColors !== false;
+    const canUploadLogo = isSystemAdmin || generalAccess.canUploadLogo !== false;
+    const canEditName = isSystemAdmin || generalAccess.canEditName !== false;
+    const canEditShortName = isSystemAdmin || generalAccess.canEditShortName !== false;
+    const canEditSlogan = isSystemAdmin || generalAccess.canEditSlogan !== false;
+    const canEditDescription = isSystemAdmin || generalAccess.canEditDescription !== false;
+    const canEditMission = isSystemAdmin || generalAccess.canEditMission !== false;
+    const canEditIcon = isSystemAdmin || generalAccess.canEditIcon !== false;
+    const canEditBanner = isSystemAdmin || generalAccess.canEditBanner !== false;
+
     const logoFileId = watch('config.general.logoFileId');
+    const currentPrimary = watch('colorPrimary') || '#e65100';
+
+    const disabledClass = "bg-surface-container-low dark:bg-gray-800 border-outline-variant/20 dark:border-gray-700 text-on-surface/50 dark:text-gray-500 cursor-not-allowed";
+    const enabledClass = "bg-white dark:bg-gray-900 border-outline-variant/30 dark:border-gray-700 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all";
 
     const handleLogoUpload = async (file: File) => {
         if (!armId) { toast.error('ابتدا بازار را ذخیره کنید'); return; }
@@ -89,172 +110,273 @@ export function GeneralSection({ register, errors, watch, setValue, armId }: Gen
         toast.success('لوگو حذف شد');
     };
 
+    const applyTheme = (primary: string, secondary: string) => {
+        setValue('colorPrimary', primary, { shouldDirty: true });
+        setValue('colorSecondary', secondary, { shouldDirty: true });
+
+        const root = document.documentElement;
+        const isDark = document.documentElement.classList.contains('dark');
+        root.style.setProperty('--primary', isDark ? lightenColor(primary, 0.3) : primary);
+        root.style.setProperty('--primary-container', primary);
+        root.style.setProperty('--on-primary', isDark ? '#000000' : '#ffffff');
+
+        if (currentArm && currentSlug) {
+            dispatch(setArm({ arm: { ...currentArm, colorPrimary: primary, colorSecondary: secondary }, slug: currentSlug }));
+        }
+        toast.success(`تم "${primary}" اعمال شد`, { duration: 1500 });
+    };
+
     return (
-        <div className="space-y-6">
+        <div className="space-y-8">
             {/* ═══════════════ اطلاعات پایه ═══════════════ */}
-            <div className="bg-surface-container-low p-6 border border-outline-variant rounded-xl">
-                <h3 className="text-lg font-semibold mb-4">اطلاعات عمومی بازار</h3>
+            <section>
+                <div className="flex items-center gap-2 mb-4">
+                    <Info className="w-4 h-4 text-primary" />
+                    <h3 className="text-sm font-bold text-on-surface dark:text-gray-100">اطلاعات عمومی</h3>
+                </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* slug */}
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-on-surface block">
-                            شناسه یکتا (slug) <span className="text-primary">*</span>
+                    {/* slug - فقط ادمین سیستم می‌تونه تغییر بده */}
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-on-surface-variant dark:text-gray-400 flex items-center gap-1.5">
+                            شناسه یکتا <span className="text-primary">*</span>
+                            {!canEditSlug && <Lock className="w-3 h-3 text-purple-500" />}
                         </label>
                         <input
-                            {...register('slug', { required: 'شناسه یکتا الزامی است' })}
+                            {...register('slug', { required: true })}
                             placeholder="barton"
-                            className="w-full bg-surface-container-lowest border border-outline rounded-lg h-10 px-3 text-sm text-right focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all"
+                            readOnly={!canEditSlug}
+                            className={cn(
+                                "w-full rounded-xl h-10 px-3 text-sm text-right placeholder:text-on-surface-variant/30",
+                                !canEditSlug
+                                    ? "bg-surface-container-low dark:bg-gray-800 border-outline-variant/20 dark:border-gray-700 text-on-surface/50 dark:text-gray-500 cursor-not-allowed"
+                                    : "bg-white dark:bg-gray-900 border-outline-variant/30 dark:border-gray-700 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                            )}
                         />
-                        {errors.slug && <p className="text-error text-xs">{errors.slug.message as string}</p>}
+                        {errors.slug && <p className="text-error text-[11px]">شناسه یکتا الزامی است</p>}
                     </div>
 
                     {/* name */}
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-on-surface block">
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-on-surface-variant dark:text-gray-400">
                             نام بازار <span className="text-primary">*</span>
                         </label>
                         <input
-                            {...register('name', { required: 'نام بازار الزامی است' })}
+                            {...register('name', { required: true })}
                             placeholder="بارتون"
-                            className="w-full bg-surface-container-lowest border border-outline rounded-lg h-10 px-3 text-sm text-right focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all"
+                            readOnly={!canEditName}
+                            className={cn(
+                                "w-full rounded-xl h-10 px-3 text-sm text-right placeholder:text-on-surface-variant/30",
+                                !canEditName
+                                    ? "bg-surface-container-low dark:bg-gray-800 border-outline-variant/20 dark:border-gray-700 text-on-surface/50 dark:text-gray-500 cursor-not-allowed"
+                                    : "bg-white dark:bg-gray-900 border-outline-variant/30 dark:border-gray-700 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                            )}
                         />
-                        {errors.name && <p className="text-error text-xs">{errors.name.message as string}</p>}
+                        {errors.name && <p className="text-error text-[11px]">نام بازار الزامی است</p>}
                     </div>
 
-                    {/* shortName */}
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-on-surface block">نام کوتاه</label>
-                        <input
-                            {...register('shortName')}
-                            placeholder="بارتون"
-                            className="w-full bg-surface-container-lowest border border-outline rounded-lg h-10 px-3 text-sm text-right focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all"
-                        />
-                    </div>
 
                     {/* slogan */}
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-on-surface block">
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-on-surface-variant dark:text-gray-400">
                             شعار <span className="text-primary">*</span>
                         </label>
                         <input
-                            {...register('slogan', { required: 'شعار الزامی است' })}
+                            {...register('slogan', { required: true })}
                             placeholder="قیمت امروز فروشندگان عمده مصالح ساختمانی"
-                            className="w-full bg-surface-container-lowest border border-outline rounded-lg h-10 px-3 text-sm text-right focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all"
+                            readOnly={!canEditSlogan}
+                            className={cn(
+                                "w-full rounded-xl h-10 px-3 text-sm text-right placeholder:text-on-surface-variant/30",
+                                !canEditSlogan
+                                    ? "bg-surface-container-low dark:bg-gray-800 border-outline-variant/20 dark:border-gray-700 text-on-surface/50 dark:text-gray-500 cursor-not-allowed"
+                                    : "bg-white dark:bg-gray-900 border-outline-variant/30 dark:border-gray-700 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                            )}
                         />
-                        {errors.slogan && <p className="text-error text-xs">{errors.slogan.message as string}</p>}
+                        {errors.slogan && <p className="text-error text-[11px]">شعار الزامی است</p>}
                     </div>
 
-                    {/* status - فقط برای غیرفعال کردن سایت */}
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-on-surface block">وضعیت بازار</label>
-                        <select
-                            {...register('status')}
-                            className="w-full bg-surface-container-lowest border border-outline rounded-lg h-10 px-3 text-sm text-right appearance-none focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all"
-                        >
-                            <option value="active">فعال</option>
-                            <option value="draft">پیش‌نویس</option>
-                            <option value="archived">بایگانی</option>
-                        </select>
-                        <p className="text-[10px] text-on-surface-variant/60">برای غیرفعال‌سازی موقت بازار (تعمیرات)</p>
+                    {/* status - فقط ادمین سیستم می‌تونه تغییر بده */}
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-on-surface-variant dark:text-gray-400 flex items-center gap-1.5">
+                            وضعیت
+                            {!canEditStatus && <Lock className="w-3 h-3 text-purple-500" />}
+                        </label>
+                        {canEditStatus ? (
+                            <select
+                                {...register('status')}
+                                className="w-full rounded-xl h-10 px-3 text-sm text-right appearance-none cursor-pointer bg-white dark:bg-gray-900 border border-outline-variant/30 dark:border-gray-700 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                            >
+                                <option value="active">فعال</option>
+                                <option value="archived">بایگانی</option>
+                            </select>
+                        ) : (
+                            <div className="w-full rounded-xl h-10 px-3 text-sm text-right flex items-center bg-surface-container-low dark:bg-gray-800 border border-outline-variant/20 dark:border-gray-700 text-on-surface/50 dark:text-gray-500 cursor-not-allowed">
+                                {watch('status') === 'active' ? 'فعال' : 'بایگانی'}
+                            </div>
+                        )}
                     </div>
 
                     {/* description */}
-                    <div className="md:col-span-2 space-y-2">
-                        <label className="text-sm font-medium text-on-surface block">توضیحات</label>
+                    <div className="md:col-span-2 space-y-1.5">
+                        <label className="text-xs font-medium text-on-surface-variant dark:text-gray-400">توضیحات</label>
                         <textarea
                             {...register('description')}
                             rows={3}
                             placeholder="توضیحات کامل بازار..."
-                            className="w-full bg-surface-container-lowest border border-outline rounded-lg px-3 py-2 text-sm text-right focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all resize-none"
+                            readOnly={!canEditDescription}
+                            className={cn(
+                                "w-full rounded-xl px-3 py-2 text-sm text-right resize-none placeholder:text-on-surface-variant/30",
+                                !canEditDescription
+                                    ? "bg-surface-container-low dark:bg-gray-800 border-outline-variant/20 dark:border-gray-700 text-on-surface/50 dark:text-gray-500 cursor-not-allowed"
+                                    : "bg-white dark:bg-gray-900 border-outline-variant/30 dark:border-gray-700 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                            )}
                         />
                     </div>
 
                     {/* mission */}
-                    <div className="md:col-span-2 space-y-2">
-                        <label className="text-sm font-medium text-on-surface block">مأموریت</label>
+                    <div className="md:col-span-2 space-y-1.5">
+                        <label className="text-xs font-medium text-on-surface-variant dark:text-gray-400">مأموریت</label>
                         <textarea
                             {...register('mission')}
                             rows={2}
                             placeholder="مأموریت و هدف بازار..."
-                            className="w-full bg-surface-container-lowest border border-outline rounded-lg px-3 py-2 text-sm text-right focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all resize-none"
+                            readOnly={!canEditMission}
+                            className={cn(
+                                "w-full rounded-xl px-3 py-2 text-sm text-right resize-none placeholder:text-on-surface-variant/30",
+                                !canEditMission
+                                    ? "bg-surface-container-low dark:bg-gray-800 border-outline-variant/20 dark:border-gray-700 text-on-surface/50 dark:text-gray-500 cursor-not-allowed"
+                                    : "bg-white dark:bg-gray-900 border-outline-variant/30 dark:border-gray-700 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                            )}
                         />
                     </div>
                 </div>
-            </div>
+            </section>
 
             {/* ═══════════════ لوگو ═══════════════ */}
             {armId && (
-                <div className="bg-surface-container-low p-6 border border-outline-variant rounded-xl">
-                    <h3 className="text-lg font-semibold mb-1">لوگوی بازار</h3>
-                    <p className="text-xs text-on-surface-variant mb-4">
-                        لوگو در هدر سایت نمایش داده می‌شود. سایز پیشنهادی: ۲۰۰×۸۰ پیکسل، پس‌زمینه شفاف
-                    </p>
+                <section>
+                    <div className="flex items-center gap-2 mb-4">
+                        <Upload className="w-4 h-4 text-primary" />
+                        <h3 className="text-sm font-bold text-on-surface dark:text-gray-100">لوگوی بازار</h3>
+                        {!canUploadLogo && <Lock className="w-3.5 h-3.5 text-purple-500" />}
+                    </div>
+                    <p className="text-[11px] text-on-surface-variant/60 dark:text-gray-500 mb-4">سایز پیشنهادی 200 * 200 پیکسل با پس‌زمینه شفاف</p>
 
                     <div className="flex items-start gap-4">
                         <FileUploader
                             value={logoFileId}
-                            onFileSelect={handleLogoUpload}
-                            onRemove={handleLogoRemove}
+                            onFileSelect={canUploadLogo ? handleLogoUpload : undefined}
+                            onRemove={canUploadLogo ? handleLogoRemove : undefined}
                             rounded={false}
                             width={120}
                             height={120}
-                            disabled={isUploadingLogo}
+                            disabled={isUploadingLogo || !canUploadLogo}
                         />
-
                         <div className="flex-1 space-y-2">
                             {isUploadingLogo && (
                                 <div className="flex items-center gap-2 text-sm text-primary">
-                                    <Loader2 className="w-4 h-4 animate-spin" />در حال آپلود لوگو...
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    در حال آپلود...
                                 </div>
                             )}
                             {logoFileId && !isUploadingLogo && (
-                                <p className="text-sm text-green-600 flex items-center gap-1"><Upload className="w-4 h-4" />لوگو آپلود شد</p>
+                                <p className="text-sm text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                                    <Check className="w-4 h-4" />
+                                    لوگو آپلود شد
+                                </p>
                             )}
                             {!logoFileId && !isUploadingLogo && (
-                                <p className="text-sm text-on-surface-variant">برای آپلود لوگو کلیک کنید</p>
+                                <p className="text-sm text-on-surface-variant/60 dark:text-gray-500">
+                                    {canUploadLogo ? 'کلیک کنید' : 'آپلود لوگو نیازمند ارتقا حساب است'}
+                                </p>
                             )}
-                            <div className="text-xs text-on-surface-variant space-y-1">
-                                <p>• فرمت‌های مجاز: PNG, JPG, SVG, WebP</p>
-                                <p>• حداکثر حجم: ۲۰۰ کیلوبایت</p>
-                                <p>• پس‌زمینه شفاف پیشنهاد می‌شود</p>
+                            <div className="text-[10px] text-on-surface-variant/40 dark:text-gray-600 space-y-0.5">
+                                <p>PNG, JPG, SVG, WebP</p>
+                                <p>حداکثر ۲۰۰ کیلوبایت</p>
                             </div>
                         </div>
                     </div>
-                </div>
+                </section>
             )}
 
+            {/* ═══════════════ تم رنگ ═══════════════ */}
+            {canEditColors && (
+                <section>
+                    <div className="flex items-center gap-2 mb-4">
+                        <Palette className="w-4 h-4 text-primary" />
+                        <h3 className="text-sm font-bold text-on-surface dark:text-gray-100">تم رنگ بازار</h3>
+                    </div>
 
-            {/* رنگ تم */}
-            <div className="space-y-3">
-                <label className="text-sm font-medium text-on-surface block">انتخاب تم بازار</label>
-                <div className="flex flex-wrap gap-3">
-                    {THEME_PRESETS.map((preset) => {
-                        const isActive = (watch('colorPrimary') || '#8b0000') === preset.primary;
-                        return (
-                            <button
-                                key={preset.id}
-                                type="button"
-                                onClick={() => setValue('colorPrimary', preset.primary, { shouldDirty: true })}
-                                className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all hover:shadow-md ${
-                                    isActive ? 'border-primary shadow-md scale-105' : 'border-outline-variant/30'
-                                }`}
-                            >
-                                {/* نوار طیف رنگی */}
-                                <div className="flex h-8 rounded-lg overflow-hidden shadow-sm" style={{ width: '120px' }}>
-                                    {preset.spectrum.map((color, i) => (
-                                        <div key={i} className="flex-1 h-full" style={{ backgroundColor: color }} />
-                                    ))}
-                                </div>
-                                <span className="text-xs font-medium text-on-surface">{preset.label}</span>
-                                {isActive && (
-                                    <span className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">انتخاب شده</span>
-                                )}
-                            </button>
-                        );
-                    })}
-                </div>
-            </div>
+                    <div className="flex flex-wrap gap-2 w-full">
+                        {THEME_PRESETS.map(preset => {
+                            const isActive = currentPrimary === preset.primary;
+                            return (
+                                <button
+                                    key={preset.id}
+                                    type="button"
+                                    onClick={() => applyTheme(preset.primary, preset.secondary)}
+                                    className={cn(
+                                        "group w-32 relative flex items-center gap-2 px-3 py-2 rounded-xl border-2 transition-all duration-200 hover:scale-105",
+                                        isActive
+                                            ? 'border-primary bg-primary/5 dark:bg-primary/10 shadow-md ring-2 ring-primary/20'
+                                            : 'border-transparent hover:border-outline-variant/40 dark:hover:border-gray-700 hover:bg-surface-container-low/50 dark:hover:bg-gray-800/50'
+                                    )}
+                                    title={preset.label}
+                                >
+                                    <div
+                                        className="w-6 h-6 rounded-full ring-2 ring-offset-2 ring-white/20 dark:ring-black/20 transition-shadow group-hover:ring-offset-2 flex-shrink-0"
+                                        style={{ backgroundColor: preset.primary }}
+                                    />
+                                    <span className={cn(
+                                        "text-xs font-medium transition-colors",
+                                        isActive
+                                            ? 'text-primary dark:text-primary-400'
+                                            : 'text-on-surface-variant dark:text-gray-400 group-hover:text-on-surface dark:group-hover:text-gray-300'
+                                    )}>
+                                    {preset.label}
+                                </span>
+                                    {isActive && (
+                                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-primary rounded-full flex items-center justify-center shadow-sm">
+                                            <Check className="w-2.5 h-2.5 text-white" />
+                                        </div>
+                                    )}
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    <div className="mt-5 pt-5 border-t border-outline-variant/20 dark:border-gray-800">
+                        <div className="flex items-center gap-3">
+                            <div className="relative">
+                                <input
+                                    type="color"
+                                    value={currentPrimary}
+                                    onChange={(e) => applyTheme(e.target.value, e.target.value)}
+                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                />
+                                <div
+                                    className="w-9 h-9 rounded-xl border-2 border-outline-variant/30 dark:border-gray-700 cursor-pointer shadow-sm hover:shadow-md transition-shadow"
+                                    style={{ backgroundColor: currentPrimary }}
+                                />
+                            </div>
+                            <input
+                                type="text"
+                                value={currentPrimary}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    if (/^#[0-9A-Fa-f]{0,6}$/.test(val)) {
+                                        setValue('colorPrimary', val, { shouldDirty: true });
+                                        if (val.length === 7) applyTheme(val, val);
+                                    }
+                                }}
+                                className="w-24 bg-white dark:bg-gray-900 border border-outline-variant/30 dark:border-gray-700 rounded-xl h-9 px-3 text-xs text-center font-mono focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                                placeholder="#e65100"
+                            />
+                            <span className="text-[11px] text-on-surface-variant/40 dark:text-gray-600">کد HEX دلخواه</span>
+                        </div>
+                    </div>
+                </section>
+            )}
         </div>
     );
 }

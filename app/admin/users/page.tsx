@@ -247,7 +247,7 @@ export default function AdminUsersPage() {
                                     </div>
                                 </td>
                                 <td className="px-4 py-3 text-sm font-mono text-on-surface" dir="ltr">{u.phone}</td>
-                                <td className="px-4 py-3 text-xs">{u.role === 'admin' ? <span className="text-purple-600">ادمین</span> : u.role === 'arm_manager' ? 'مدیر بازو' : 'کاربر'}</td>
+                                <td className="px-4 py-3 text-xs">{u.role === 'system_admin' ? <span className="text-purple-600">ادمین</span> : u.role === 'arm_manager' ? 'مدیر بازو' : 'کاربر'}</td>
                                 <td className="px-4 py-3">{getStatusBadge(u.status)}</td>
                                 <td className="px-4 py-3 text-xs text-on-surface-variant">{new Date(u.createdAt).toLocaleDateString('fa-IR')}</td>
                                 <td className="px-4 py-3 text-xs">{u._count?.armMemberships || 0} بازار</td>

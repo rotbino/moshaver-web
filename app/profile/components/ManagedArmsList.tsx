@@ -37,7 +37,7 @@ interface ManagedArm {
         memberships: number;
         ads: number;
     };
-    role: string; // 'admin'
+    role: string; // 'system_admin'
 }
 
 interface ManagedArmsListProps {
@@ -75,7 +75,7 @@ export function ManagedArmsList({ onRefresh }: ManagedArmsListProps) {
 
                 // فیلتر کردن بازارهایی که نقش admin دارند
                 const adminArms = arms.filter(
-                    (arm: any) => arm.role === 'admin'
+                    (arm: any) => arm.role === 'system_admin'
                 ) as ManagedArm[];
 
                 setManagedArms(adminArms);
@@ -101,11 +101,11 @@ export function ManagedArmsList({ onRefresh }: ManagedArmsListProps) {
     // ============================================================
     if (loading) {
         return (
-            <div className="bg-white rounded-2xl border border-outline-variant/50 p-6 shadow-sm">
+            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-outline-variant/50 dark:border-gray-700 p-6 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-semibold text-on-surface flex items-center gap-2">
+                    <h2 className="text-lg font-semibold text-on-surface dark:text-gray-100 flex items-center gap-2">
                         <Shield className="w-5 h-5 text-primary" />
-                       مدیریت
+                        مدیریت
                     </h2>
                 </div>
                 <div className="flex items-center justify-center py-8">
@@ -126,19 +126,19 @@ export function ManagedArmsList({ onRefresh }: ManagedArmsListProps) {
     // ✅ رندر اصلی
     // ============================================================
     return (
-        <div className="bg-white rounded-2xl border border-outline-variant/50 p-4 sm:p-6 shadow-sm mb-8">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-outline-variant/50 dark:border-gray-700 p-4 sm:p-6 shadow-sm mb-8">
             {/* هدر */}
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                     <Shield className="w-5 h-5 text-primary" />
-                    <h2 className="font-semibold text-on-surface">
-                     مدیریت بازار
+                    <h2 className="font-semibold text-on-surface dark:text-gray-100">
+                        مدیریت بازار
                     </h2>
-                    <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                    <span className="text-xs bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-400 px-2 py-0.5 rounded-full">
                         {managedArms.length}
                     </span>
                 </div>
-                <span className="text-[10px] text-on-surface-variant">
+                <span className="text-[10px] text-on-surface-variant dark:text-gray-400">
                     شما مدیر این بازار هستید
                 </span>
             </div>
@@ -153,7 +153,7 @@ export function ManagedArmsList({ onRefresh }: ManagedArmsListProps) {
                     return (
                         <div
                             key={arm.id}
-                            className="border border-outline-variant/50 rounded-xl p-4 hover:shadow-md transition-all hover:border-primary/30 group"
+                            className="border border-outline-variant/50 dark:border-gray-700 rounded-xl p-4 hover:shadow-md transition-all hover:border-primary/30 dark:hover:border-primary/40 group"
                         >
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                                 {/* اطلاعات بازار */}
@@ -174,28 +174,28 @@ export function ManagedArmsList({ onRefresh }: ManagedArmsListProps) {
                                     {/* نام و اطلاعات */}
                                     <div className="min-w-0">
                                         <div className="flex items-center gap-2 flex-wrap">
-                                            <h3 className="font-semibold text-sm text-on-surface truncate">
+                                            <h3 className="font-semibold text-sm text-on-surface dark:text-gray-100 truncate">
                                                 {arm.name}
                                             </h3>
-                                            <span className="text-[9px] bg-primary/5 text-primary px-1.5 py-0.5 rounded-full border border-primary/10 whitespace-nowrap">
+                                            <span className="text-[9px] bg-primary/5 dark:bg-primary/20 text-primary dark:text-primary-400 px-1.5 py-0.5 rounded-full border border-primary/10 dark:border-primary/30 whitespace-nowrap">
                                                 مدیر
                                             </span>
                                         </div>
                                         {arm.slogan && (
-                                            <p className="text-xs text-on-surface-variant truncate">
+                                            <p className="text-xs text-on-surface-variant dark:text-gray-400 truncate">
                                                 {arm.slogan}
                                             </p>
                                         )}
                                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
-                                            <span className="flex items-center gap-0.5 text-[10px] text-on-surface-variant/70">
+                                            <span className="flex items-center gap-0.5 text-[10px] text-on-surface-variant/70 dark:text-gray-400">
                                                 <Calendar className="w-3 h-3" />
                                                 {createdDate}
                                             </span>
-                                            <span className="flex items-center gap-0.5 text-[10px] text-on-surface-variant/70">
+                                            <span className="flex items-center gap-0.5 text-[10px] text-on-surface-variant/70 dark:text-gray-400">
                                                 <Users className="w-3 h-3" />
                                                 {membersCount} عضو
                                             </span>
-                                            <span className="flex items-center gap-0.5 text-[10px] text-on-surface-variant/70">
+                                            <span className="flex items-center gap-0.5 text-[10px] text-on-surface-variant/70 dark:text-gray-400">
                                                 <Package className="w-3 h-3" />
                                                 {adsCount} آگهی
                                             </span>
@@ -207,7 +207,7 @@ export function ManagedArmsList({ onRefresh }: ManagedArmsListProps) {
                                 <div className="flex items-center gap-2 self-end sm:self-center">
                                     <Link
                                         href={`/${arm.slug}`}
-                                        className="flex items-center gap-1 px-3 py-1.5 text-xs text-on-surface-variant hover:text-primary border border-outline-variant hover:border-primary/30 rounded-lg transition-colors"
+                                        className="flex items-center gap-1 px-3 py-1.5 text-xs text-on-surface-variant dark:text-gray-400 hover:text-primary dark:hover:text-primary-400 border border-outline-variant dark:border-gray-600 hover:border-primary/30 rounded-lg transition-colors"
                                     >
                                         <Eye className="w-3.5 h-3.5" />
                                         مشاهده
@@ -224,8 +224,8 @@ export function ManagedArmsList({ onRefresh }: ManagedArmsListProps) {
                             </div>
 
                             {/* نوار پیشرفت یا آمار سریع (اختیاری) */}
-                            <div className="mt-3 pt-3 border-t border-outline-variant/30">
-                                <div className="flex items-center gap-4 text-[10px] text-on-surface-variant">
+                            <div className="mt-3 pt-3 border-t border-outline-variant/30 dark:border-gray-700">
+                                <div className="flex items-center gap-4 text-[10px] text-on-surface-variant dark:text-gray-400">
                                     <div className="flex items-center gap-1">
                                         <div className="w-2 h-2 rounded-full bg-green-500" />
                                         <span>فعال</span>
@@ -238,7 +238,7 @@ export function ManagedArmsList({ onRefresh }: ManagedArmsListProps) {
                                         <Users className="w-3 h-3" />
                                         <span>{membersCount} عضو</span>
                                     </div>
-                                    <span className="text-[9px] text-on-surface-variant/50">
+                                    <span className="text-[9px] text-on-surface-variant/50 dark:text-gray-500">
                                         شناسه: {arm.slug}
                                     </span>
                                 </div>

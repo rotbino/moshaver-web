@@ -1,4 +1,13 @@
 // lib/api/apiTypes.ts
+// ==================== Roles ====================
+// نقش‌های سیستمی (سطح کاربر) - ساده شده
+export type SystemRole = 'system_admin' | 'system_user';
+
+// نقش‌های سطح بازو (Arm) - ساده شده
+export type ArmRole = 'arm_owner' | 'arm_seller' | 'arm_buyer' | 'arm_member';
+
+// نقش‌های سطح کسب‌وکار (Business) - ساده شده
+export type BusinessRole = 'business_owner' | 'business_admin' | 'business_seller';
 
 // ==================== Base ====================
 export class ApiError extends Error {
@@ -28,7 +37,7 @@ export interface User {
     id: string;
     phone: string;
     fullName: string;
-    role: string;
+    role: SystemRole;
     avatarUrl?: string;
     locale?: string;
     isPhoneVerified?: boolean;
@@ -98,7 +107,7 @@ export interface ArmMembership {
         icon: string | null;
         colorPrimary: string | null;
     };
-    role: string;
+    role: ArmRole;
     status: string;
     joinedAt: string;
 }
@@ -132,6 +141,7 @@ export interface ActiveBusinessResponse extends Business {
     activeMembershipsCount: number;
 }
 // ==================== Arm ====================
+// lib/api/apiTypes.ts
 export interface Arm {
     id: string;
     slug: string;
@@ -149,6 +159,8 @@ export interface Arm {
     membersCount?: number;
     activeAdsCount?: number;
     categoryTree?: CategoryNode[];
+    isArmOwner?: boolean;      // ← اضافه شد
+    isSystemAdmin?: boolean;   // ← اضافه شد
 }
 
 export interface CategoryNode {
@@ -356,3 +368,51 @@ export interface DeleteFileResponse {
 }
 
 //#################Setting
+
+export type PermissionLevel = 1 | 2 | 3;
+export const PERMISSION_LEVELS = {
+    1: {  // سطح پایه - مدیر بازو معمولی
+        label: 'پایه',
+        canEditSlug: false,
+        canEditStatus: false,
+        canEditColors: true,
+        canUploadLogo: true,
+        canEditCategories: false,
+        canEditLocations: false,
+        canEditIndustries: false,
+        canEditModules: false,
+        canEditAccessRules: false,
+        canEditPayment: false,
+        canEditEconomy: false,
+    },
+    2: {  // سطح پیشرفته - مدیر بازو سطح ۲
+        label: 'پیشرفته',
+        canEditSlug: false,
+        canEditStatus: true,
+        canEditColors: true,
+        canUploadLogo: true,
+        canEditCategories: false,
+        canEditLocations: false,
+        canEditIndustries: false,
+        canEditModules: true,
+        canEditAccessRules: true,
+        canEditPayment: true,
+        canEditEconomy: true,
+    },
+    3: {  // سطح کامل - مدیر سیستم
+        label: 'کامل',
+        canEditSlug: true,
+        canEditStatus: true,
+        canEditColors: true,
+        canUploadLogo: true,
+        canEditCategories: true,
+        canEditLocations: true,
+        canEditIndustries: true,
+        canEditModules: true,
+        canEditAccessRules: true,
+        canEditPayment: true,
+        canEditEconomy: true,
+    },
+};
+
+

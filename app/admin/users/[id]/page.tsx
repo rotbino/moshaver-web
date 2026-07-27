@@ -182,7 +182,7 @@ export default function AdminUserDetailPage() {
         return <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 text-[11px] rounded-full border", s.cls)}><s.icon className="w-3 h-3" />{s.label}</span>;
     };
     const getRoleBadge = (role: string) => {
-        if (role === 'admin') return <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] rounded-full border bg-purple-50 text-purple-600 border-purple-200"><Crown className="w-3 h-3" />ادمین</span>;
+        if (role === 'system_admin') return <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] rounded-full border bg-purple-50 text-purple-600 border-purple-200"><Crown className="w-3 h-3" />ادمین</span>;
         if (role === 'arm_manager') return <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] rounded-full border bg-blue-50 text-blue-600 border-blue-200">مدیر بازو</span>;
         return <span className="text-xs text-on-surface-variant">کاربر</span>;
     };
@@ -264,7 +264,7 @@ export default function AdminUserDetailPage() {
                 {activeTab === 'info' && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                         <InfoCard label="موبایل" value={userData.phone} icon={Phone} dir="ltr" />
-                        <InfoCard label="نقش" value={userData.role === 'admin' ? 'ادمین' : userData.role === 'arm_manager' ? 'مدیر بازو' : 'کاربر'} icon={Shield} />
+                        <InfoCard label="نقش" value={userData.role === 'system_admin' ? 'ادمین' : userData.role === 'arm_manager' ? 'مدیر بازو' : 'کاربر'} icon={Shield} />
                         <InfoCard label="وضعیت" value={userData.status === 'active' ? 'فعال' : userData.status === 'suspended' ? 'تعلیق' : 'مسدود'} icon={userData.status === 'active' ? CheckCircle : XCircle} />
                         <InfoCard label="تأیید موبایل" value={userData.isPhoneVerified ? 'تأیید شده' : 'تأیید نشده'} icon={userData.isPhoneVerified ? CheckCircle : Clock} />
                         <InfoCard label="تاریخ عضویت" value={formatDate(userData.createdAt)} icon={CalendarIcon} />
@@ -427,7 +427,7 @@ export default function AdminUserDetailPage() {
                                         <div className="min-w-0">
                                             <p className="font-medium text-sm truncate">{m.arm?.name}</p>
                                             <p className="text-xs text-on-surface-variant">
-                                                {m.role === 'admin' ? 'مدیر' : m.role === 'seller' ? 'فروشنده' : m.role === 'buyer' ? 'خریدار' : 'بازدیدکننده'}
+                                                {m.role === 'arm-owner' ? 'مدیر' : m.role === 'seller' ? 'فروشنده' : m.role === 'buyer' ? 'خریدار' : 'بازدیدکننده'}
                                             </p>
                                             <div className="flex items-center gap-2 mt-1">
                                                 <span className={cn("text-[10px] px-1.5 py-0.5 rounded-full",

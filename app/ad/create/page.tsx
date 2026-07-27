@@ -9,327 +9,577 @@ import { FormHeader } from '@/app/components';
 import { useCreateAd, useActiveBusiness, useCreditBalance, useArmCategoryTree } from '@/lib/api/apiHooks';
 import { toast } from 'sonner';
 import { createPortal } from 'react-dom';
-import { Package, Send, Edit2, X, MapPin, Clock, Shield, ArrowDown, Info, Search, AlertCircle, CreditCard, TrendingUp, Zap } from 'lucide-react';
+import { Package, Send, Edit2, X, MapPin, Clock, Shield, ArrowDown, Info, Search, AlertCircle, CreditCard, TrendingUp } from 'lucide-react';
 import { ArmLocationSelector } from '@/app/components/ArmLocationSelector';
 import { NumberInput } from "@/components/common";
 import { cn } from '@/lib/utils';
 
 export default function CreateAdPage() {
     const router = useRouter();
-    const { isAuthenticated } = useSelector((state: RootState) => state.auth);
+    const { user, isAuthenticated } = useSelector((state: RootState) => state.auth);
     const { currentSlug, currentArm } = useSelector((state: RootState) => state.arm);
     const { data: business, isLoading: businessLoading } = useActiveBusiness();
     const { data: categoryTree, isLoading: categoriesLoading } = useArmCategoryTree(currentSlug || 'barton');
     const { data: creditBalance, refetch: refetchBalance } = useCreditBalance();
 
-    const [formData, setFormData] = useState({
-        categoryId: '', productType: '', unitPrice: 0, minQuantity: 0,
-        availableQuantity: 0, cityCode: '', cityLabel: '', provinceCode: '', provinceLabel: '',
-        validityDays: '1', isAnonymous: false, isBumped: false,
-    });
+    // ⭐ ۱. همه useStateها
+    const [redirecting, setRedirecting] = useState(false);
+    const [activeAdsCount, setActiveAdsCount] = useState(0);
     const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+
     const createAdMutation = useCreateAd();
 
-    // ═══════════════ تنظیمات ═══════════════
+    // ⭐ ۲. همه useMemoها - قبل از useStateهای وابسته
     const armConfig = currentArm?.config as any || {};
     const priceTable = armConfig.modules?.priceTable || {};
 
     const currencyUnit = useMemo(() => {
-        const map: Record<string, string> = { IRR: 'تومان', IRR1: 'ریال', USD: 'دلار', EUR: 'یورو' };
-        return map[armConfig.economy?.currency || 'IRR'] || 'تومان';
+        const code = armConfig.economy?.currency || 'IRR';
+        const currencyMap: Record<string, string> = {
+            'IRR': 'تومان', 'IRR1': 'ریال', 'USD': 'دلار', 'EUR': 'یورو',
+        };
+        return currencyMap[code] || code || 'تومان';
     }, [armConfig.economy?.currency]);
 
-    const maxFreeAdsPerMonth = priceTable.maxFreeAdsPerMonth ?? 5;
-    const bumpCost = priceTable.bumpCost ?? 10;
-    const adValidityDefaultDays = priceTable.adValidityDefaultDays ?? 7;
-    const allowAnonymous = priceTable.allowAnonymousPublishing ?? true;
+    const maxFreeAdsPerMonth = useMemo(() => priceTable.maxFreeAdsPerMonth ?? 5, [priceTable.maxFreeAdsPerMonth]);
+    const bumpCost = useMemo(() => priceTable.bumpCost ?? 10, [priceTable.bumpCost]);
+    const allowAnonymousPublishing = useMemo(() => priceTable.allowAnonymousPublishing ?? true, [priceTable.allowAnonymousPublishing]);
+    const autoApproveAds = useMemo(() => priceTable.autoApproveAds ?? true, [priceTable.autoApproveAds]);
+    const adValidityDefaultDays = useMemo(() => priceTable.adValidityDefaultDays ?? 1, [priceTable.adValidityDefaultDays]);
+    const maxActiveAdsPerUser = useMemo(() => priceTable.maxActiveAdsPerUser ?? 10, [priceTable.maxActiveAdsPerUser]);
 
-    const [activeAdsCount, setActiveAdsCount] = useState(0);
-    useEffect(() => {
-        if (!business || !currentSlug) return;
-        const active = business.ads?.filter((a: any) => a.status === 'active' && a.armId === currentArm?.id).length || 0;
-        setActiveAdsCount(active);
-    }, [business, currentSlug, currentArm]);
+    // ⭐ formData بعد از useMemoها
+    const [formData, setFormData] = useState({
+        categoryId: '',
+        productType: '',
+        unitPrice: 0,
+        minQuantity: 0,
+        availableQuantity: 0,
+        cityCode: '',
+        cityLabel: '',
+        provinceCode: '',
+        provinceLabel: '',
+        validityDays: String(adValidityDefaultDays || 1),
+        isAnonymous: false,
+        isBumped: false,
+    });
 
-    const remainingFreeAds = Math.max(0, maxFreeAdsPerMonth - activeAdsCount);
-    const isAdFree = remainingFreeAds > 0;
-
-    // ═══════════════ دسته‌بندی‌ها ═══════════════
     const categoriesWithUnits = useMemo(() => {
         if (!categoryTree) return [];
-        const flatten = (nodes: any[]): any[] => {
-            let res: any[] = [];
-            for (const p of nodes) {
-                if (p.isSelected) {
-                    res.push({ id: p.id, name: p.title, defaultUnitId: p.defaultUnitId || '', unitTitle: p.unitTitle || 'تن', unitShortCode: p.unitShortCode || 'تن', defaultMinQuantity: p.defaultMinQuantity || 0, example: p.example || '' });
+        const flattenCategories = (nodes: any[]): any[] => {
+            let result: any[] = [];
+            for (const parent of nodes) {
+                if (parent.isSelected === true) {
+                    result.push({
+                        id: parent.id, name: parent.title,
+                        defaultUnitId: parent.defaultUnitId || '',
+                        unitTitle: parent.unitTitle || 'تن',
+                        unitShortCode: parent.unitShortCode || 'تن',
+                        defaultMinQuantity: parent.defaultMinQuantity || 0,
+                        example: parent.example || '',
+                    });
                 }
-                if (p.children?.length) res = res.concat(flatten(p.children));
+                if (parent.children?.length > 0) result = result.concat(flattenCategories(parent.children));
             }
-            return res;
+            return result;
         };
-        return flatten(categoryTree);
+        return flattenCategories(categoryTree);
     }, [categoryTree]);
 
     const filteredCategories = useMemo(() => {
         if (!searchQuery.trim()) return categoriesWithUnits;
-        return categoriesWithUnits.filter(c => c.name.includes(searchQuery.trim()));
+        return categoriesWithUnits.filter(cat => cat.name.includes(searchQuery.trim()));
     }, [categoriesWithUnits, searchQuery]);
 
-    const selectedCategoryData = useMemo(() => categoriesWithUnits.find(c => c.id === formData.categoryId) || null, [formData.categoryId, categoriesWithUnits]);
+    const selectedCategoryData = useMemo(() => {
+        if (formData.categoryId && categoriesWithUnits.length > 0) {
+            return categoriesWithUnits.find(c => c.id === formData.categoryId) || null;
+        }
+        return null;
+    }, [formData.categoryId, categoriesWithUnits]);
+
     const unitName = selectedCategoryData?.unitTitle || 'تن';
     const categoryExample = selectedCategoryData?.example || '';
 
-    // ═══════════════ موقعیت ═══════════════
     const locationTree = currentArm?.locationTree || [];
     const totalCities = useMemo(() => {
-        let c = 0;
-        for (const p of locationTree) if (p.children) c += p.children.filter((x: any) => x.type === 'city').length;
-        return c;
+        let count = 0;
+        for (const province of locationTree) {
+            if (province.children) count += province.children.filter((c: any) => c.type === 'city').length;
+        }
+        return count;
     }, [locationTree]);
+
     const hasSingleCity = totalCities === 1;
     const singleCityData = useMemo(() => {
-        if (!hasSingleCity) return null;
-        for (const p of locationTree) {
-            const city = p.children?.find((c: any) => c.type === 'city');
-            if (city) return { city, province: p };
+        if (hasSingleCity) {
+            for (const province of locationTree) {
+                const city = province.children?.find((c: any) => c.type === 'city');
+                if (city) return { city, province };
+            }
         }
         return null;
     }, [locationTree, hasSingleCity]);
 
+    const isLoading = businessLoading || categoriesLoading;
+    const remainingFreeAds = Math.max(0, maxFreeAdsPerMonth - activeAdsCount);
+    const isAdFree = remainingFreeAds > 0;
+    const hasReachedMaxAds = activeAdsCount >= maxActiveAdsPerUser;
+
+    // ⭐ ۳. همه useEffectها
+    useEffect(() => {
+        if (!isAuthenticated) {
+            setRedirecting(true);
+            toast.info('برای ثبت آگهی ابتدا وارد شوید');
+            router.replace('/login?redirect=/ad/create');
+            return;
+        }
+        if (!businessLoading && !business) {
+            setRedirecting(true);
+            toast.info('برای ثبت آگهی، ابتدا در یک دقیقه کسب‌وکار خود را ثبت کنید');
+            router.replace('/business/register');
+        }
+    }, [isAuthenticated, business, businessLoading, router]);
+
+    useEffect(() => {
+        const fetchActiveAdsCount = async () => {
+            if (!business || !currentSlug) return;
+            try {
+                const activeAds = business.ads?.filter((ad: any) => ad.status === 'active' && ad.armId === currentArm?.id) || [];
+                setActiveAdsCount(activeAds.length);
+            } catch (error) {
+                console.error('Error fetching active ads count:', error);
+            }
+        };
+        fetchActiveAdsCount();
+    }, [business, currentSlug, currentArm]);
+
     useEffect(() => {
         if (business?.cityCode && !hasSingleCity) {
-            setFormData(p => ({ ...p, cityCode: business.cityCode || '', cityLabel: business.city || '', provinceCode: business.provinceCode || '', provinceLabel: business.province || '' }));
+            setFormData(prev => ({ ...prev, cityCode: business.cityCode || '', cityLabel: business.city || '', provinceCode: business.provinceCode || '', provinceLabel: business.province || '' }));
         } else if (hasSingleCity && singleCityData) {
-            setFormData(p => ({ ...p, cityCode: singleCityData.city.cityCode || singleCityData.city.id, cityLabel: singleCityData.city.title, provinceCode: singleCityData.province.provinceCode || singleCityData.province.id, provinceLabel: singleCityData.province.title }));
+            setFormData(prev => ({ ...prev, cityCode: singleCityData.city.cityCode || singleCityData.city.id, cityLabel: singleCityData.city.title, provinceCode: singleCityData.province.provinceCode || singleCityData.province.id, provinceLabel: singleCityData.province.title }));
         }
     }, [business, hasSingleCity, singleCityData]);
 
+    // ⭐ ۴. return شرطی
+    if (isLoading || redirecting || !business) {
+        return (
+            <div className="min-h-screen flex flex-col bg-background">
+                <FormHeader title="ثبت قیمت" backUrl="/" />
+                <main className="flex-1 flex items-center justify-center">
+                    <div className="text-center">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto" />
+                        <p className="mt-4 text-on-surface-variant">
+                            {redirecting ? 'در حال انتقال...' : 'در حال بارگذاری...'}
+                        </p>
+                    </div>
+                </main>
+            </div>
+        );
+    }
+
+    // ⭐ ۵. توابع
     const validityOptions = [
+        { value: '1', label: '۲۴ ساعت' },
+        { value: '2', label: '۴۸ ساعت' },
+        { value: '3', label: '۷۲ ساعت' },
         { value: String(adValidityDefaultDays), label: `${adValidityDefaultDays} روز (پیش‌فرض)` },
-        { value: '1', label: '۱ روز' },
-        { value: '7', label: '۷ روز' },
     ];
 
-    useEffect(() => {
-        if (!isAuthenticated) { router.push('/login?redirect=/ad/create'); return; }
-        if (!businessLoading && !business) { router.push('/business/register'); toast.info('ابتدا کسب‌وکار خود را ثبت کنید'); }
-    }, [isAuthenticated, business, businessLoading, router]);
-
-    // ═══════════════ validate ═══════════════
     const validate = () => {
-        const e: Record<string, string> = {};
-        if (!formData.categoryId) e.categoryId = 'دسته کالا الزامی است';
-        if (!formData.productType.trim()) e.productType = 'نوع کالا را وارد کنید';
-        if (formData.unitPrice <= 0) e.unitPrice = 'قیمت معتبر وارد کنید';
-        if (formData.minQuantity <= 0) e.minQuantity = 'حداقل خرید را وارد کنید';
-        if (formData.availableQuantity <= 0) e.availableQuantity = 'موجودی را وارد کنید';
-        if (!formData.cityCode) e.city = 'محل کالا را انتخاب کنید';
-        setErrors(e);
-        return Object.keys(e).length === 0;
+        const newErrors: Record<string, string> = {};
+        if (!formData.categoryId) newErrors.categoryId = 'انتخاب دسته کالا الزامی است';
+        if (!formData.productType.trim()) newErrors.productType = 'نوع کالا را وارد کنید';
+        if (formData.unitPrice <= 0) newErrors.unitPrice = 'قیمت واحد معتبر وارد کنید';
+        if (formData.minQuantity <= 0) newErrors.minQuantity = 'حداقل خرید را وارد کنید';
+        if (formData.availableQuantity <= 0) newErrors.availableQuantity = 'موجودی انبار را وارد کنید';
+        if (!formData.cityCode) newErrors.city = 'محل کالا را انتخاب کنید';
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!validate()) return;
+        if (hasReachedMaxAds && isAdFree) {
+            toast.error(`شما به سقف ${maxActiveAdsPerUser} آگهی فعال رسیده‌اید`);
+            return;
+        }
         setIsSubmitting(true);
         try {
-            const title = formData.productType ? `${selectedCategoryData?.name || ''} ${formData.productType}` : selectedCategoryData?.name || '';
+            const title = formData.productType
+                ? `${selectedCategoryData?.name || ''} ${formData.productType}`
+                : selectedCategoryData?.name || '';
+
             await createAdMutation.mutateAsync({
-                armSlug: currentSlug || 'barton', categoryId: formData.categoryId,
-                unitId: selectedCategoryData?.defaultUnitId || '', title, productType: formData.productType,
-                unitPrice: formData.unitPrice, minQuantity: formData.minQuantity,
+                armSlug: currentSlug || 'barton',
+                categoryId: formData.categoryId,
+                unitId: selectedCategoryData?.defaultUnitId || '',
+                title,
+                productType: formData.productType,
+                unitPrice: formData.unitPrice,
+                minQuantity: formData.minQuantity,
                 availableQuantity: formData.availableQuantity,
-                city: formData.cityLabel, cityCode: formData.cityCode, provinceCode: formData.provinceCode,
-                locationDetail: '', validityDays: parseInt(formData.validityDays),
-                isAnonymous: formData.isAnonymous, isBumped: formData.isBumped,
+                city: formData.cityLabel,
+                cityCode: formData.cityCode,
+                provinceCode: formData.provinceCode,
+                locationDetail: '',
+                validityDays: parseInt(formData.validityDays),
+                isAnonymous: formData.isAnonymous,
+                isBumped: formData.isBumped,
             });
+
             await refetchBalance();
-            toast.success('آگهی ثبت شد');
+            toast.success('آگهی با موفقیت ثبت شد');
             router.push('/');
         } catch (error: any) {
+            console.error('Create ad error:', error);
             if (error?.data?.errorCode === 'INSUFFICIENT_CREDIT') {
-                toast.error('اعتبار کافی نیست'); await refetchBalance();
-            } else toast.error(error?.message || 'خطا');
-        } finally { setIsSubmitting(false); }
+                toast.error(error?.data?.message || 'اعتبار شما کافی نیست. لطفاً اعتبار خریداری کنید.');
+                await refetchBalance();
+            } else {
+                toast.error(error?.message || 'خطا در ثبت آگهی');
+            }
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
-    const isLoading = businessLoading || categoriesLoading;
-    if (isLoading) return (
-        <div className="min-h-screen flex items-center justify-center bg-background">
-            <div className="text-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto" /><p className="mt-4 text-on-surface-variant">در حال بارگذاری...</p></div>
-        </div>
-    );
-
-    // ═══════════════ RENDER ═══════════════
+    // ⭐ ۶. رندر اصلی
     return (
-        <div className="min-h-screen flex flex-col bg-surface">
+        <div className="min-h-screen flex flex-col bg-surface pb-24">
             <FormHeader title="ثبت قیمت جدید" backUrl="/" />
 
-            <main className="flex-1 w-full max-w-6xl mx-auto px-4 pt-20 pb-24 lg:pb-8">
-                <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+            <main className="flex-1 w-full max-w-5xl mx-auto px-4 pt-20">
+                <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-                    {/* ═══════════ ستون اصلی (۳/۵) ═══════════ */}
-                    <div className="lg:col-span-3 space-y-5">
-                        {/* دسته‌بندی */}
-                        <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-5">
-                            <label className="text-sm font-semibold block mb-3">دسته‌بندی کالا <span className="text-error">*</span></label>
+                    {/* ستون چپ: اطلاعات اصلی کالا */}
+                    <div className="lg:col-span-7 space-y-6">
+
+                        {/* باکس دسته بندی */}
+                        <div className="bg-white p-4 rounded-2xl border border-outline-variant/50 shadow-sm">
+                            <label className="text-sm font-semibold text-on-surface block mb-3">
+                                نوع کالا و دسته‌بندی <span className="text-error">*</span>
+                            </label>
+
                             <div className="relative mb-3">
-                                <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="جستجو..."
-                                       className="w-full bg-surface border border-outline rounded-xl h-10 px-4 pr-10 text-sm focus:ring-1 focus:ring-primary/30 outline-none" />
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant/50" />
+                                <input
+                                    type="text"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    placeholder="جستجوی دسته‌بندی..."
+                                    className="w-full h-10 bg-surface-container-lowest border border-outline px-4 pr-10 text-sm focus:ring-1 focus:ring-primary focus:border-primary outline-none rounded-lg"
+                                />
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant pointer-events-none" />
                             </div>
-                            <div className="max-h-[300px] overflow-y-auto no-scrollbar">
+
+                            <div className="max-h-[240px] sm:max-h-[600px] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                                 {filteredCategories.length > 0 ? (
-                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                                        {filteredCategories.map(cat => (
-                                            <button key={cat.id} type="button"
-                                                    onClick={() => setFormData(p => ({ ...p, categoryId: cat.id, minQuantity: cat.defaultMinQuantity || 0, unitPrice: 0, productType: '' }))}
-                                                    className={cn("p-3 rounded-xl border-2 text-center transition-all text-sm font-medium",
-                                                        formData.categoryId === cat.id ? "border-primary bg-primary/5 text-primary" : "border-outline-variant/30 hover:border-primary/30")}>
-                                                {cat.name}
-                                                <span className="block text-[10px] text-on-surface-variant mt-0.5">واحد: {cat.unitTitle}</span>
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                        {filteredCategories.map((cat) => (
+                                            <button
+                                                key={cat.id}
+                                                type="button"
+                                                onClick={() => {
+                                                    setFormData(prev => ({ ...prev, categoryId: cat.id, minQuantity: cat.defaultMinQuantity || 0, unitPrice: 0, productType: '' }));
+                                                    setErrors(prev => ({ ...prev, categoryId: '' }));
+                                                }}
+                                                className={cn(
+                                                    "flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all text-center",
+                                                    formData.categoryId === cat.id
+                                                        ? "border-primary bg-primary/5 shadow-sm"
+                                                        : "border-outline-variant/50 hover:border-primary/30 hover:bg-surface-container-low"
+                                                )}
+                                            >
+                                                <span className={cn("text-sm font-bold leading-tight", formData.categoryId === cat.id ? "text-primary" : "text-on-surface")}>{cat.name}</span>
+                                                <span className="text-[10px] text-on-surface-variant mt-1">واحد: {cat.unitTitle}</span>
                                             </button>
                                         ))}
                                     </div>
-                                ) : <div className="text-center py-8 text-sm text-on-surface-variant">موردی یافت نشد</div>}
+                                ) : (
+                                    <div className="text-center py-6 text-sm text-on-surface-variant">
+                                        دسته‌بندی با نام "{searchQuery}" یافت نشد
+                                    </div>
+                                )}
                             </div>
                             {errors.categoryId && <p className="text-error text-xs mt-2">{errors.categoryId}</p>}
                         </div>
 
-                        {/* نوع کالا + قیمت + موجودی */}
+                        {/* باکس نوع کالا */}
                         {selectedCategoryData && (
-                            <div className="space-y-5">
-                                {/* نوع کالا */}
-                                <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-5 space-y-2">
-                                    <label className="text-sm font-semibold block"><Package className="w-4 h-4 inline ml-1 text-primary" />نوع {selectedCategoryData.name} <span className="text-error">*</span></label>
-                                    <input type="text" value={formData.productType}
-                                           onChange={e => { setFormData(p => ({ ...p, productType: e.target.value })); if (errors.productType) setErrors(p => ({ ...p, productType: '' })); }}
-                                           placeholder={categoryExample ? `مثال: ${categoryExample}` : `مثال: درجه یک`}
-                                           className="w-full bg-surface border border-outline rounded-xl h-12 px-4 text-sm focus:ring-1 focus:ring-primary/30 outline-none" />
-                                    {errors.productType && <p className="text-error text-xs">{errors.productType}</p>}
+                            <div className="bg-white p-4 rounded-2xl border border-outline-variant/50 shadow-sm space-y-2">
+                                <label className="text-sm font-semibold text-on-surface block">
+                                    <Package className="w-4 h-4 inline-block ml-1 text-primary" />
+                                    نوع {selectedCategoryData.name} <span className="text-error">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    value={formData.productType}
+                                    onChange={(e) => {
+                                        setFormData(prev => ({ ...prev, productType: e.target.value }));
+                                        if (errors.productType) setErrors(prev => ({ ...prev, productType: '' }));
+                                    }}
+                                    placeholder={categoryExample ? `مثال: ${selectedCategoryData.name} ${categoryExample}` : `مثال: ${selectedCategoryData.name} درجه یک`}
+                                    className="w-full h-12 bg-surface-container-lowest border border-outline px-4 text-sm text-right focus:ring-1 focus:ring-primary focus:border-primary outline-none rounded-lg"
+                                />
+                                {categoryExample && (
+                                    <p className="text-[10px] text-on-surface-variant">راهنما: {categoryExample}</p>
+                                )}
+                                {errors.productType && <p className="text-error text-xs">{errors.productType}</p>}
+                            </div>
+                        )}
+
+                        {/* باکس ارتباط قیمت و حجم */}
+                        {selectedCategoryData && (
+                            <div className="bg-primary/5 border-2 border-dashed border-primary/30 rounded-2xl p-5 space-y-4">
+                                <div className="flex items-center gap-2 text-primary">
+                                    <Package className="w-5 h-5" />
+                                    <h3 className="font-bold text-sm">تعیین قیمت بر اساس حجم خرید</h3>
+                                </div>
+                                <p className="text-xs text-on-surface-variant leading-relaxed">
+                                    در فروش عمده، قیمت معمولاً به میزان خرید بستگی دارد. لطفاً حداقل حجمی که برای این قیمت در نظر دارید را وارد کنید.
+                                </p>
+
+                                <div className="bg-white rounded-xl p-4 border border-outline-variant space-y-2 shadow-sm">
+                                    <label className="text-xs font-medium text-on-surface-variant">
+                                        ۱. حداقل حجم فروش شما ({unitName}) <span className="text-error">*</span>
+                                    </label>
+                                    <NumberInput
+                                        value={formData.minQuantity || undefined}
+                                        onChange={(val) => {
+                                            setFormData(prev => ({ ...prev, minQuantity: val || 0 }));
+                                            if (errors.minQuantity) setErrors(prev => ({ ...prev, minQuantity: '' }));
+                                        }}
+                                        unit={unitName}
+                                        className="w-full h-14 bg-surface-container-lowest border border-outline px-4 text-xl font-bold text-right focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none rounded-lg"
+                                    />
+                                    {errors.minQuantity && <p className="text-error text-xs">{errors.minQuantity}</p>}
                                 </div>
 
-                                {/* قیمت و حجم */}
-                                <div className="bg-primary/5 border-2 border-dashed border-primary/20 rounded-2xl p-5 space-y-4">
-                                    <div className="flex items-center gap-2 text-primary"><Package className="w-5 h-5" /><h3 className="font-bold text-sm">قیمت‌گذاری</h3></div>
-                                    <div className="bg-surface rounded-xl p-4 space-y-2">
-                                        <label className="text-xs font-medium">حداقل حجم فروش ({unitName}) <span className="text-error">*</span></label>
-                                        <NumberInput value={formData.minQuantity || undefined}
-                                                     onChange={v => { setFormData(p => ({ ...p, minQuantity: v || 0 })); if (errors.minQuantity) setErrors(p => ({ ...p, minQuantity: '' })); }}
-                                                     unit={unitName} className="w-full h-12 bg-surface-container-lowest border border-outline rounded-xl px-4 text-lg font-bold focus:ring-2 focus:ring-primary/20 outline-none" />
-                                        {errors.minQuantity && <p className="text-error text-xs">{errors.minQuantity}</p>}
-                                    </div>
-                                    <div className="flex justify-center"><ArrowDown className="w-5 h-5 text-on-surface-variant/50" /></div>
-                                    <div className="bg-surface rounded-xl p-4 space-y-2">
-                                        <label className="text-xs font-medium">قیمت هر {unitName} <span className="text-error">*</span></label>
-                                        <NumberInput value={formData.unitPrice || undefined}
-                                                     onChange={v => { setFormData(p => ({ ...p, unitPrice: v || 0 })); if (errors.unitPrice) setErrors(p => ({ ...p, unitPrice: '' })); }}
-                                                     unit={currencyUnit} className="w-full h-12 bg-surface-container-lowest border border-outline rounded-xl px-4 text-lg font-bold focus:ring-2 focus:ring-primary/20 outline-none" />
-                                        {errors.unitPrice && <p className="text-error text-xs">{errors.unitPrice}</p>}
-                                    </div>
+                                <div className="flex justify-center text-on-surface-variant">
+                                    <ArrowDown className="w-5 h-5" />
                                 </div>
 
-                                {/* موجودی */}
-                                <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-5 space-y-2">
-                                    <label className="text-sm font-semibold block">موجودی انبار ({unitName}) <span className="text-error">*</span></label>
-                                    <NumberInput value={formData.availableQuantity || undefined}
-                                                 onChange={v => { setFormData(p => ({ ...p, availableQuantity: v || 0 })); if (errors.availableQuantity) setErrors(p => ({ ...p, availableQuantity: '' })); }}
-                                                 unit={unitName} className="w-full h-12 bg-surface-container-lowest border border-outline rounded-xl px-4 focus:ring-1 focus:ring-primary/30 outline-none" />
-                                    {errors.availableQuantity && <p className="text-error text-xs">{errors.availableQuantity}</p>}
+                                <div className="relative">
+                                    <label className="text-xs font-medium text-on-surface-variant block mb-2">
+                                        ۲. قیمت هر {unitName} برای خرید حداقل {formData.minQuantity || '...'} {unitName} <span className="text-error">*</span>
+                                    </label>
+                                    <NumberInput
+                                        value={formData.unitPrice || undefined}
+                                        onChange={(val) => {
+                                            setFormData(prev => ({ ...prev, unitPrice: val || 0 }));
+                                            if (errors.unitPrice) setErrors(prev => ({ ...prev, unitPrice: '' }));
+                                        }}
+                                        unit={currencyUnit}
+                                        className="w-full h-14 bg-surface-container-lowest border border-outline px-4 text-xl font-bold text-right focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none rounded-lg"
+                                    />
+                                    {errors.unitPrice && <p className="text-error text-xs mt-1">{errors.unitPrice}</p>}
                                 </div>
+                            </div>
+                        )}
+
+                        {/* موجودی انبار */}
+                        {selectedCategoryData && (
+                            <div className="bg-white p-4 rounded-2xl border border-outline-variant/50 shadow-sm space-y-2">
+                                <label className="text-sm font-semibold text-on-surface">
+                                    موجودی فعلی انبار ({unitName}) <span className="text-error">*</span>
+                                </label>
+                                <NumberInput
+                                    value={formData.availableQuantity || undefined}
+                                    onChange={(val) => {
+                                        setFormData(prev => ({ ...prev, availableQuantity: val || 0 }));
+                                        if (errors.availableQuantity) setErrors(prev => ({ ...prev, availableQuantity: '' }));
+                                    }}
+                                    unit={unitName}
+                                    className="w-full h-12 bg-surface-container-lowest border border-outline px-4 text-right focus:ring-1 focus:ring-primary focus:border-primary outline-none rounded-lg"
+                                    placeholder="موجودی را وارد کنید"
+                                />
+                                {errors.availableQuantity && <p className="text-error text-xs">{errors.availableQuantity}</p>}
                             </div>
                         )}
                     </div>
 
-                    {/* ═══════════ ستون کناری (۲/۵) ═══════════ */}
-                    <div className="lg:col-span-2 space-y-4 lg:sticky lg:top-24 lg:self-start">
-                        {/* موقعیت */}
-                        <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-5 space-y-2">
-                            <label className="text-sm font-semibold block"><MapPin className="w-4 h-4 inline ml-1 text-primary" />محل کالا <span className="text-error">*</span></label>
+                    {/* ستون راست: تنظیمات و انتشار */}
+                    <div className="lg:col-span-5 space-y-4 lg:sticky lg:top-24 lg:self-start">
+
+                        {/* محل کالا */}
+                        <div className="bg-white p-4 rounded-2xl border border-outline-variant/50 shadow-sm space-y-2">
+                            <label className="text-sm font-semibold text-on-surface block">
+                                <MapPin className="w-4 h-4 inline-block ml-1 text-primary" />
+                                محل کالا <span className="text-error">*</span>
+                            </label>
                             {hasSingleCity ? (
-                                <div className="flex items-center gap-2 p-3 bg-surface border rounded-xl text-sm"><MapPin className="w-4 h-4 text-primary" />{singleCityData?.city.title}</div>
+                                <div className="flex items-center gap-2 p-3 bg-surface-container-low border border-outline-variant rounded-lg text-sm text-on-surface">
+                                    <MapPin className="w-4 h-4 text-primary" />
+                                    <span>{singleCityData?.city.title}</span>
+                                </div>
                             ) : (
-                                <button type="button" onClick={() => setIsLocationModalOpen(true)}
-                                        className="w-full flex items-center justify-between p-3 bg-surface border border-outline rounded-xl text-sm hover:border-primary/50 transition-colors">
-                                    <span className={formData.cityLabel ? "text-on-surface" : "text-on-surface-variant"}>{formData.cityLabel || 'انتخاب شهر...'}</span>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsLocationModalOpen(true)}
+                                    className="w-full flex items-center justify-between p-3 border border-outline bg-surface-container-lowest rounded-lg text-sm hover:border-primary/50 transition-colors"
+                                >
+                                    <span className={formData.cityLabel ? "text-on-surface" : "text-on-surface-variant"}>
+                                        {formData.cityLabel || 'انتخاب شهر...'}
+                                    </span>
                                     <Edit2 className="w-4 h-4 text-primary" />
                                 </button>
                             )}
                             {errors.city && <p className="text-error text-xs">{errors.city}</p>}
                         </div>
 
-                        {/* اعتبار */}
-                        <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-5 space-y-2">
-                            <label className="text-sm font-semibold block"><Clock className="w-4 h-4 inline ml-1 text-primary" />مدت اعتبار</label>
-                            <select value={formData.validityDays} onChange={e => setFormData(p => ({ ...p, validityDays: e.target.value }))}
-                                    className="w-full bg-surface border border-outline rounded-xl h-12 px-3 text-sm appearance-none focus:ring-1 focus:ring-primary/30 outline-none">
-                                {validityOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                        {/* مدت اعتبار */}
+                        <div className="bg-white p-4 rounded-2xl border border-outline-variant/50 shadow-sm space-y-2">
+                            <label className="text-sm font-semibold text-on-surface block">
+                                <Clock className="w-4 h-4 inline-block ml-1 text-primary" />
+                                مدت اعتبار قیمت
+                            </label>
+                            <select
+                                value={formData.validityDays}
+                                onChange={(e) => setFormData(prev => ({ ...prev, validityDays: e.target.value }))}
+                                className="w-full h-12 bg-surface-container-lowest border border-outline px-3 text-sm appearance-none focus:ring-1 focus:ring-primary focus:border-primary outline-none rounded-lg"
+                            >
+                                {[...new Map(validityOptions.map(opt => [opt.value, opt])).values()].map((opt: any) => (
+                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                ))}
                             </select>
                         </div>
 
-                        {/* نردبان + ناشناس */}
-                        <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-5 space-y-4">
-                            <div className="flex items-center justify-between">
+                        {/* نردبان + انتشار ناشناس */}
+                        <div className="bg-white p-4 rounded-2xl border border-outline-variant/50 shadow-sm space-y-3">
+                            {/* نردبان */}
+                            <div className="flex items-center justify-between p-3 bg-surface-container-low rounded-lg">
                                 <div>
-                                    <span className="text-sm font-medium">نردبان <Zap className="w-4 h-4 inline text-primary" /></span>
-                                    <p className="text-[10px] text-on-surface-variant">مصرف {bumpCost} اعتبار</p>
+                                    <span className="text-sm font-medium text-on-surface block">نردبان (بالاترین نمایش)</span>
+                                    <span className="text-[10px] text-on-surface-variant">۱ روز • مصرف {bumpCost} اعتبار</span>
                                 </div>
                                 <label className="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" checked={formData.isBumped} onChange={e => { setFormData(p => ({ ...p, isBumped: e.target.checked })); if (e.target.checked) toast.info(`${bumpCost} اعتبار کسر می‌شود`); }} className="sr-only peer" />
-                                    <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-primary after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5" />
+                                    <input type="checkbox" checked={formData.isBumped} onChange={(e) => {
+                                        setFormData(prev => ({ ...prev, isBumped: e.target.checked }));
+                                        if (e.target.checked) toast.info(`با فعال شدن نردبان، ${bumpCost} اعتبار کسر خواهد شد`, { duration: 4000 });
+                                    }} className="sr-only peer" />
+                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                                 </label>
                             </div>
-                            {allowAnonymous && (
-                                <div className="flex items-center justify-between border-t border-outline-variant/20 pt-3">
-                                    <span className="text-sm font-medium">انتشار ناشناس</span>
+
+                            {formData.isBumped && (
+                                <div className="bg-warning/5 border border-warning/30 rounded-lg p-3 flex items-start gap-2">
+                                    <TrendingUp className="w-4 h-4 text-warning mt-0.5 flex-shrink-0" />
+                                    <div className="text-xs text-on-surface-variant">
+                                        <span className="font-medium text-warning">توجه:</span> <span className="font-bold">{bumpCost}</span> اعتبار کسر می‌شود.
+                                        {creditBalance && creditBalance.balance < bumpCost && (
+                                            <span className="block text-error mt-1">⚠️ اعتبار ناکافی!</span>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* ⭐ انتشار ناشناس - فقط وقتی config اجازه میده */}
+                            {allowAnonymousPublishing && (
+                                <div className="flex items-center justify-between p-3 bg-surface-container-low rounded-lg">
+                                    <span className="text-sm font-medium text-on-surface">انتشار ناشناس</span>
                                     <label className="relative inline-flex items-center cursor-pointer">
-                                        <input type="checkbox" checked={formData.isAnonymous} onChange={e => setFormData(p => ({ ...p, isAnonymous: e.target.checked }))} className="sr-only peer" />
-                                        <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-primary after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5" />
+                                        <input type="checkbox" checked={formData.isAnonymous} onChange={(e) => setFormData(prev => ({ ...prev, isAnonymous: e.target.checked }))} className="sr-only peer" />
+                                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                                     </label>
                                 </div>
                             )}
                         </div>
 
-                        {/* اعتبار + انتشار */}
-                        <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-5 space-y-4">
-                            <div className="flex items-center justify-between text-sm">
-                                <span className="flex items-center gap-1"><Shield className="w-4 h-4" />اعتبار:</span>
-                                <span className="font-bold">{creditBalance?.balance || 0}</span>
+                        {/* ⭐ پیام تأیید مدیر */}
+                        {!autoApproveAds && (
+                            <div className="bg-amber-50 text-amber-700 p-3 rounded-lg text-xs flex items-start gap-2 border border-amber-200">
+                                <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                                <p>آگهی شما پس از تأیید مدیر بازار منتشر خواهد شد.</p>
                             </div>
+                        )}
+
+                        {/* ⭐ پیام سقف آگهی */}
+                        {hasReachedMaxAds && (
+                            <div className="bg-error/5 text-error p-3 rounded-lg text-xs flex items-start gap-2 border border-error/20">
+                                <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                                <p>شما به حداکثر تعداد آگهی فعال ({maxActiveAdsPerUser}) رسیده‌اید.</p>
+                            </div>
+                        )}
+
+                        {/* اعتبار و انتشار */}
+                        <div className="bg-white p-4 rounded-2xl border border-outline-variant/50 shadow-sm space-y-4">
+                            <div className="flex items-center justify-between text-xs">
+                                <span className="text-on-surface-variant flex items-center gap-1"><Shield className="w-4 h-4" /> اعتبار شما:</span>
+                                <span className="font-bold text-on-surface">{creditBalance?.balance || 0}</span>
+                            </div>
+
                             {isAdFree ? (
-                                <div className="bg-green-50 text-green-700 p-3 rounded-xl text-xs">{remainingFreeAds} آگهی رایگان باقی‌مانده</div>
+                                <div className="bg-green-50 text-green-700 p-3 rounded-lg flex items-start gap-2 text-xs border border-green-200">
+                                    <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                                    <p>ثبت این آگهی رایگان است ({remainingFreeAds} از {maxFreeAdsPerMonth} باقی‌مانده).</p>
+                                </div>
                             ) : (
-                                <div className="bg-warning/5 border border-warning/20 p-3 rounded-xl text-xs text-warning">
-                                    سهمیه رایگان تمام شده. هزینه هر آگهی: {bumpCost} اعتبار
+                                <div className="bg-warning/5 border-2 border-warning/30 rounded-2xl p-5 space-y-4">
+                                    <div className="flex items-center gap-3 text-warning">
+                                        <AlertCircle className="w-6 h-6" />
+                                        <h3 className="font-bold text-sm">سهمیه آگهی رایگان به پایان رسیده است</h3>
+                                    </div>
+                                    <p className="text-xs text-on-surface-variant leading-relaxed">
+                                        سهمیه آگهی رایگان شما ({maxFreeAdsPerMonth} عدد در ماه) به پایان رسیده است.
+                                        برای ثبت آگهی جدید، {bumpCost} اعتبار از موجودی شما کسر می‌شود.
+                                    </p>
+                                    <div className="flex items-center justify-between bg-white rounded-xl p-4 border border-outline-variant">
+                                        <div>
+                                            <span className="text-sm font-medium text-on-surface">اعتبار شما</span>
+                                            <span className="text-xs text-on-surface-variant block">موجودی فعلی</span>
+                                        </div>
+                                        <div className="text-left">
+                                            <span className="text-2xl font-bold text-primary">{creditBalance?.balance || 0}</span>
+                                            <span className="text-xs text-on-surface-variant mr-1">اعتبار</span>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => router.push('/credit/purchase')}
+                                            className="flex items-center gap-2 px-4 py-2 bg-primary text-on-primary rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
+                                        >
+                                            <CreditCard className="w-4 h-4" />
+                                            خرید اعتبار
+                                        </button>
+                                    </div>
                                 </div>
                             )}
-                            <button type="submit" disabled={isSubmitting}
-                                    className="w-full h-12 bg-primary text-on-primary rounded-xl font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-50 shadow-lg shadow-primary/20">
-                                {isSubmitting ? <div className="w-5 h-5 border-2 border-on-primary/30 border-t-on-primary rounded-full animate-spin" /> : <><Send className="w-4 h-4" />ثبت قیمت</>}
+
+                            <button type="submit" disabled={isSubmitting || (hasReachedMaxAds && isAdFree)}
+                                    className="w-full h-14 bg-primary text-on-primary text-base font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform rounded-xl disabled:opacity-50 shadow-lg shadow-primary/20">
+                                {isSubmitting ? (
+                                    <div className="w-6 h-6 border-2 border-on-primary/30 border-t-on-primary rounded-full animate-spin" />
+                                ) : (
+                                    <>ثبت قیمت و انتشار<Send className="w-5 h-5" /></>
+                                )}
                             </button>
                         </div>
                     </div>
                 </form>
             </main>
 
-            {/* مودال موقعیت */}
+            {/* مودال انتخاب شهر */}
             {!hasSingleCity && isLocationModalOpen && createPortal(
-                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
                     <div className="bg-surface w-full max-w-md rounded-2xl border border-outline-variant shadow-xl p-6">
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="text-base font-semibold">انتخاب محل کالا</h3>
-                            <button onClick={() => setIsLocationModalOpen(false)}><X className="w-5 h-5" /></button>
+                            <button onClick={() => setIsLocationModalOpen(false)} className="text-on-surface-variant hover:text-primary transition-colors"><X className="w-5 h-5" /></button>
                         </div>
-                        <ArmLocationSelector provinceCode={formData.provinceCode} cityCode={formData.cityCode}
-                                             onProvinceChange={(code, label) => setFormData(p => ({ ...p, provinceCode: code, provinceLabel: label, cityCode: '', cityLabel: '' }))}
-                                             onCityChange={(code, label) => { setFormData(p => ({ ...p, cityCode: code, cityLabel: label })); setErrors(p => ({ ...p, city: '' })); }}
-                                             error={errors.city} />
-                        <div className="flex gap-3 mt-6 pt-4 border-t">
-                            <button type="button" onClick={() => setIsLocationModalOpen(false)} className="flex-1 h-12 border rounded-xl text-sm">انصراف</button>
-                            <button type="button" onClick={() => { if (!formData.cityCode) { setErrors(p => ({ ...p, city: 'شهر را انتخاب کنید' })); return; } setIsLocationModalOpen(false); }} className="flex-1 h-12 bg-primary text-on-primary rounded-xl text-sm font-medium">تأیید</button>
+                        <ArmLocationSelector
+                            provinceCode={formData.provinceCode}
+                            cityCode={formData.cityCode}
+                            onProvinceChange={(code, label) => setFormData(prev => ({ ...prev, provinceCode: code, provinceLabel: label, cityCode: '', cityLabel: '' }))}
+                            onCityChange={(code, label) => { setFormData(prev => ({ ...prev, cityCode: code, cityLabel: label })); setErrors(prev => ({ ...prev, city: '' })); }}
+                            error={errors.city}
+                        />
+                        <div className="flex gap-3 mt-6 pt-4 border-t border-outline-variant">
+                            <button type="button" onClick={() => setIsLocationModalOpen(false)} className="flex-1 h-12 border border-outline text-sm text-on-surface rounded-xl hover:bg-surface-container-low transition-colors">انصراف</button>
+                            <button type="button" onClick={() => { if (!formData.cityCode) { setErrors(prev => ({ ...prev, city: 'لطفاً شهر را انتخاب کنید' })); return; } setIsLocationModalOpen(false); }} className="flex-1 h-12 bg-primary text-sm text-on-primary rounded-xl hover:bg-primary/90 transition-colors font-medium">تأیید</button>
                         </div>
                     </div>
                 </div>,

@@ -10,290 +10,253 @@ import {
     LayoutDashboard,
     CreditCard,
     Users,
-    Package,
     Settings,
-    LogOut,
     ChevronRight,
     ChevronLeft,
     Menu,
     X,
     Home,
+    LogOut,
+    Store,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiService } from '@/lib/api/apiService';
-
+import { ThemeToggle } from '@/app/components/ThemeToggle';
+import { cn } from '@/lib/utils';
 
 const menuItems = [
-    { href: '/arm-admin', label: 'داشبورد', icon: LayoutDashboard },
-    { href: '/arm-admin/financial', label: 'مالی', icon: CreditCard },
-   /* { href: '/arm-admin/settings/payments', label: 'تنظیمات پرداخت', icon: Settings },*/
+    { href: '/arm-admin', label: 'داشبورد', icon: LayoutDashboard, exact: true },
     { href: '/arm-admin/members', label: 'مدیریت اعضا', icon: Users },
     { href: '/arm-admin/settings', label: 'تنظیمات بازار', icon: Settings },
+    { href: '/arm-admin/financial', label: 'مالی', icon: CreditCard },
 ];
 
-export default function ArmAdminLayout({
-                                           children,
-                                       }: {
-    children: React.ReactNode;
-}) {
+export default function ArmAdminLayout({ children }: { children: React.ReactNode }) {
     const router = useRouter();
     const pathname = usePathname();
     const { user, isAuthenticated } = useSelector((state: RootState) => state.auth);
     const { currentSlug, currentArm } = useSelector((state: RootState) => state.arm);
 
     const [isCollapsed, setIsCollapsed] = useState(false);
-    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [mobileOpen, setMobileOpen] = useState(false);
     const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
+    const [loading, setLoading] = useState(true);
 
-    // ============================================================
-    // ✅ بررسی دسترسی مدیر بازار
-    // ============================================================
     useEffect(() => {
         const checkAuthorization = async () => {
             if (!isAuthenticated || !user) {
                 router.push(`/login?redirect=/arm-admin`);
-                setIsAuthorized(false);
-                setIsLoading(false);
+                setLoading(false);
                 return;
             }
-
             if (!currentSlug) {
-                toast.error('هیچ بازویی انتخاب نشده است');
                 router.push('/');
-                setIsAuthorized(false);
-                setIsLoading(false);
+                setLoading(false);
                 return;
             }
-
             try {
                 const arms = await apiService.arm.getUserArms();
-                const isAdmin = arms.some(
-                    (a: any) => a.slug === currentSlug && a.role === 'admin'
-                );
-
+                const isAdmin = arms.some((a: any) => a.slug === currentSlug && a.role === 'arm_owner');
                 if (!isAdmin) {
                     toast.error('شما دسترسی به پنل مدیریت این بازار را ندارید');
                     router.push(`/${currentSlug}`);
-                    setIsAuthorized(false);
-                    setIsLoading(false);
                     return;
                 }
-
                 setIsAuthorized(true);
-            } catch (error: any) {
-                console.error('Error checking authorization:', error);
-                toast.error('خطا در بررسی دسترسی');
+            } catch {
                 router.push(`/${currentSlug}`);
-                setIsAuthorized(false);
             } finally {
-                setIsLoading(false);
+                setLoading(false);
             }
         };
-
         checkAuthorization();
     }, [isAuthenticated, user, currentSlug, router]);
 
-    // ============================================================
-    // ✅ بستن منوی موبایل
-    // ============================================================
-    const handleLinkClick = () => {
-        setIsMobileMenuOpen(false);
+    useEffect(() => { setMobileOpen(false); }, [pathname]);
+
+    const isActive = (href: string, exact?: boolean) => {
+        if (exact) return pathname === href;
+        return pathname?.startsWith(href);
     };
 
-    // ============================================================
-    // ✅ بررسی فعال بودن مسیر
-    // ============================================================
-    const isActive = (href: string) => {
-        if (href === '/arm-admin') return pathname === '/arm-admin';
-        return pathname===href+"/"
-    };
-
-    // ============================================================
-    // ✅ در حال بارگذاری
-    // ============================================================
-    if (isLoading) {
+    if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-surface">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto" />
-                    <p className="mt-4 text-on-surface-variant">در حال بررسی دسترسی...</p>
-                </div>
+            <div className="min-h-screen flex items-center justify-center bg-surface dark:bg-gray-950">
+                <div className="animate-spin rounded-full h-10 w-10 border-2 border-primary border-t-transparent" />
             </div>
         );
     }
 
-    if (!isAuthorized) {
-        return null;
-    }
+    if (!isAuthorized) return null;
 
-    // ============================================================
-    // ✅ رندر اصلی
-    // ============================================================
-    return (
-        <div className="min-h-screen flex bg-surface">
-            {/* سایدبار دسکتاپ */}
-            <aside
-                className={`hidden lg:block fixed top-0 right-0 h-full bg-surface-container-low border-l border-outline-variant transition-all duration-300 z-50 overflow-y-auto ${
-                    isCollapsed ? 'w-20' : 'w-64'
-                }`}
-            >
-                <div className="flex items-center justify-between h-16 px-4 border-b border-outline-variant sticky top-0 bg-surface-container-low z-10">
-                    {!isCollapsed && (
-                        <div className="flex items-center gap-2">
-                            <span className="text-sm font-bold text-primary">مدیریت بازار</span>
-                            <span className="text-xs text-on-surface-variant">| {currentArm?.name || currentSlug}</span>
+    const armName = currentArm?.name || currentSlug || 'بازار';
+
+    const SidebarContent = ({ onNavigate }: { onNavigate?: () => void }) => (
+        <div className="flex flex-col h-full">
+            {/* لوگو */}
+            <div className={cn(
+                "flex items-center h-16 px-4 border-b border-outline-variant/20 dark:border-gray-800 flex-shrink-0",
+                isCollapsed ? 'justify-center' : 'justify-between'
+            )}>
+                {!isCollapsed && (
+                    <Link href={`/${currentSlug}`} className="flex items-center gap-3 min-w-0">
+                        <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center shadow-sm flex-shrink-0">
+                            <Store className="w-5 h-5 text-white" />
                         </div>
-                    )}
-                    <button
-                        onClick={() => setIsCollapsed(!isCollapsed)}
-                        className="p-1.5 hover:bg-surface-container-high rounded-lg transition-colors"
-                    >
-                        {isCollapsed ? (
-                            <ChevronLeft className="w-5 h-5 text-on-surface-variant" />
-                        ) : (
-                            <ChevronRight className="w-5 h-5 text-on-surface-variant" />
-                        )}
-                    </button>
-                </div>
-
-                <nav className="p-3 space-y-1">
-                    {menuItems.map((item) => {
-                        const active = isActive(item.href);
-                        const Icon = item.icon;
-                        return (
-                            <Link
-                                key={item.href}
-                                href={item.href}
-                                onClick={handleLinkClick}
-                                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                                    active
-                                        ? 'bg-primary/10 text-primary'
-                                        : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'
-                                } ${isCollapsed ? 'justify-center' : ''}`}
-                            >
-                                <Icon className={`w-5 h-5 ${isCollapsed ? '' : 'flex-shrink-0'}`} />
-                                {!isCollapsed && <span className="text-sm font-medium">{item.label}</span>}
-                            </Link>
-                        );
-                    })}
-
-                    <div className="border-t border-outline-variant my-3" />
-
-                    <Link
-                        href={`/${currentSlug}`}
-                        className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface ${
-                            isCollapsed ? 'justify-center' : ''
-                        }`}
-                    >
-                        <Home className="w-5 h-5" />
-                        {!isCollapsed && <span className="text-sm font-medium">بازگشت به بازار</span>}
+                        <div className="min-w-0">
+                            <span className="font-bold text-sm text-on-surface dark:text-gray-100 truncate block">{armName}</span>
+                            <span className="text-[10px] text-on-surface-variant/60 dark:text-gray-500">پنل مدیریت</span>
+                        </div>
                     </Link>
-
-                    <button
-                        onClick={() => router.push(`/${currentSlug}`)}
-                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-error hover:bg-error/10 ${
-                            isCollapsed ? 'justify-center' : ''
-                        }`}
-                    >
-                        <LogOut className="w-5 h-5" />
-                        {!isCollapsed && <span className="text-sm font-medium">خروج</span>}
-                    </button>
-                </nav>
-            </aside>
-
-            {/* منوی موبایل */}
-            <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-surface border-b border-outline-variant px-4 h-16 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <span className="text-sm font-bold text-primary">مدیریت بازار</span>
-                    <span className="text-xs text-on-surface-variant">| {currentArm?.name || currentSlug}</span>
-                </div>
+                )}
+                {isCollapsed && (
+                    <Link href={`/${currentSlug}`} className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center shadow-sm">
+                        <Store className="w-5 h-5 text-white" />
+                    </Link>
+                )}
                 <button
-                    onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                    className="p-2 hover:bg-surface-container-high rounded-lg transition-colors"
+                    onClick={() => setIsCollapsed(!isCollapsed)}
+                    className="hidden lg:flex p-2 hover:bg-surface-container-high dark:hover:bg-gray-800 rounded-xl transition-all active:scale-95"
                 >
-                    {isMobileMenuOpen ? (
-                        <X className="w-6 h-6 text-on-surface" />
+                    {isCollapsed ? (
+                        <ChevronLeft className="w-4 h-4 text-on-surface-variant dark:text-gray-400" />
                     ) : (
-                        <Menu className="w-6 h-6 text-on-surface" />
+                        <ChevronRight className="w-4 h-4 text-on-surface-variant dark:text-gray-400" />
                     )}
                 </button>
             </div>
 
-            {isMobileMenuOpen && (
+            {/* منو */}
+            <nav className="flex-1 overflow-y-auto px-3 py-5 space-y-1">
+                {menuItems.map((item) => {
+                    const active = isActive(item.href, item.exact);
+                    const Icon = item.icon;
+                    return (
+                        <Link
+                            key={item.href}
+                            href={item.href}
+                            onClick={onNavigate}
+                            className={cn(
+                                "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group",
+                                active
+                                    ? 'bg-primary text-white shadow-md font-medium'
+                                    : 'text-on-surface-variant dark:text-gray-400 hover:bg-surface-container-high dark:hover:bg-gray-800 hover:text-on-surface dark:hover:text-gray-200',
+                                isCollapsed && 'justify-center px-2'
+                            )}
+                            title={isCollapsed ? item.label : undefined}
+                        >
+                            <Icon className={cn(
+                                "w-4 h-4 flex-shrink-0",
+                                active ? 'text-white' : 'text-on-surface-variant/40 dark:text-gray-500 group-hover:text-on-surface-variant dark:group-hover:text-gray-400'
+                            )} />
+                            {!isCollapsed && (
+                                <>
+                                    <span className="text-[13px] leading-none">{item.label}</span>
+                                    {active && <span className="mr-auto w-1.5 h-1.5 rounded-full bg-white" />}
+                                </>
+                            )}
+                        </Link>
+                    );
+                })}
+            </nav>
+
+            {/* فوتر */}
+            <div className="px-3 py-4 border-t border-outline-variant/20 dark:border-gray-800 space-y-1 flex-shrink-0">
+                <Link
+                    href={`/${currentSlug}`}
+                    className={cn(
+                        "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-on-surface-variant dark:text-gray-400 hover:bg-surface-container-high dark:hover:bg-gray-800",
+                        isCollapsed && 'justify-center'
+                    )}
+                >
+                    <Home className="w-4 h-4 flex-shrink-0" />
+                    {!isCollapsed && <span className="text-[13px]">مشاهده بازار</span>}
+                </Link>
+                <button
+                    onClick={() => {
+                        localStorage.removeItem('accessToken');
+                        window.location.href = '/';
+                    }}
+                    className={cn(
+                        "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors text-error/60 dark:text-red-400/60 hover:bg-error/5 dark:hover:bg-red-900/20 hover:text-error dark:hover:text-red-400",
+                        isCollapsed && 'justify-center'
+                    )}
+                >
+                    <LogOut className="w-4 h-4 flex-shrink-0" />
+                    {!isCollapsed && <span className="text-[13px]">خروج</span>}
+                </button>
+            </div>
+        </div>
+    );
+
+    return (
+        <div className="min-h-screen flex bg-surface dark:bg-gray-950 h-screen overflow-hidden" >
+            {/* سایدبار دسکتاپ */}
+            <aside
+                className={cn(
+                    "hidden lg:flex flex-col fixed top-0 right-0 h-full bg-white dark:bg-gray-900 border-l border-outline-variant/20 dark:border-gray-800 transition-all duration-300 z-40 shadow-sm",
+                    isCollapsed ? 'w-[72px]' : 'w-64'
+                )}
+            >
+                <SidebarContent />
+            </aside>
+
+            {/* محتوای اصلی */}
+            <div className={cn(
+                "flex-1 flex flex-col min-h-screen transition-all duration-300",
+                isCollapsed ? 'lg:mr-[72px]' : 'lg:mr-64'
+            )}>
+                {/* هدر دسکتاپ */}
+                <header className="hidden lg:flex items-center justify-between h-16 px-6 bg-white dark:bg-gray-900 border-b border-outline-variant/20 dark:border-gray-800 sticky top-0 z-30 flex-shrink-0">
+                    <div>
+                        <h1 className="text-base font-bold text-on-surface dark:text-gray-100">
+                            {(() => {
+                                const item = menuItems.find(m => isActive(m.href, m.exact));
+                                return item?.label || 'پنل مدیریت';
+                            })()}
+                        </h1>
+                        <p className="text-[11px] text-on-surface-variant/60 dark:text-gray-500">{armName}</p>
+                    </div>
+                    <ThemeToggle />
+                </header>
+
+                {/* هدر موبایل */}
+                <div className="lg:hidden sticky top-0 z-30 bg-white dark:bg-gray-900 border-b border-outline-variant/20 dark:border-gray-800 px-4 h-14 flex items-center justify-between flex-shrink-0">
+                    <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+                            <Store className="w-4 h-4 text-white" />
+                        </div>
+                        <span className="font-bold text-sm text-on-surface dark:text-gray-100">{armName}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <ThemeToggle />
+                        <button onClick={() => setMobileOpen(true)} className="p-2 hover:bg-surface-container-high dark:hover:bg-gray-800 rounded-xl">
+                            <Menu className="w-5 h-5 text-on-surface-variant dark:text-gray-400" />
+                        </button>
+                    </div>
+                </div>
+
+                {/* ⭐ محتوا - فقط این قسمت اسکرول می‌خوره */}
+                <main className="flex-1 overflow-y-auto">
+                    <div className="p-4 lg:p-6">{children}</div>
+                </main>
+            </div>
+
+            {/* Drawer موبایل */}
+            {mobileOpen && (
                 <>
-                    <div
-                        className="lg:hidden fixed inset-0 bg-black/50 z-40"
-                        onClick={() => setIsMobileMenuOpen(false)}
-                    />
-                    <div className="lg:hidden fixed top-0 left-0 h-full w-72 bg-surface z-50 shadow-xl overflow-y-auto">
-                        <div className="flex items-center justify-between h-16 px-4 border-b border-outline-variant">
-                            <span className="text-sm font-bold text-primary">پنل مدیریت</span>
-                            <button
-                                onClick={() => setIsMobileMenuOpen(false)}
-                                className="p-1.5 hover:bg-surface-container-high rounded-lg transition-colors"
-                            >
-                                <X className="w-5 h-5 text-on-surface" />
+                    <div className="lg:hidden fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm z-40" onClick={() => setMobileOpen(false)} />
+                    <div className="lg:hidden fixed top-0 right-0 h-full w-72 bg-white dark:bg-gray-900 z-50 shadow-2xl animate-slide-in-right">
+                        <div className="flex items-center justify-between h-14 px-4 border-b border-outline-variant/20 dark:border-gray-800">
+                            <span className="font-bold text-sm text-on-surface dark:text-gray-100">پنل مدیریت</span>
+                            <button onClick={() => setMobileOpen(false)} className="p-2 hover:bg-surface-container-high dark:hover:bg-gray-800 rounded-xl">
+                                <X className="w-5 h-5 text-on-surface-variant dark:text-gray-400" />
                             </button>
                         </div>
-
-                        <nav className="p-3 space-y-1">
-                            {menuItems.map((item) => {
-                                const active = isActive(item.href);
-                                const Icon = item.icon;
-                                return (
-                                    <Link
-                                        key={item.href}
-                                        href={item.href}
-                                        onClick={handleLinkClick}
-                                        className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                                            active
-                                                ? 'bg-primary/10 text-primary'
-                                                : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'
-                                        }`}
-                                    >
-                                        <Icon className="w-5 h-5 flex-shrink-0" />
-                                        <span className="text-sm font-medium">{item.label}</span>
-                                    </Link>
-                                );
-                            })}
-
-                            <div className="border-t border-outline-variant my-3" />
-
-                            <Link
-                                href={`/${currentSlug}`}
-                                onClick={handleLinkClick}
-                                className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface"
-                            >
-                                <Home className="w-5 h-5 flex-shrink-0" />
-                                <span className="text-sm font-medium">بازگشت به بازار</span>
-                            </Link>
-
-                            <button
-                                onClick={() => {
-                                    setIsMobileMenuOpen(false);
-                                    router.push(`/${currentSlug}`);
-                                }}
-                                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-error hover:bg-error/10"
-                            >
-                                <LogOut className="w-5 h-5 flex-shrink-0" />
-                                <span className="text-sm font-medium">خروج</span>
-                            </button>
-                        </nav>
+                        <SidebarContent onNavigate={() => setMobileOpen(false)} />
                     </div>
                 </>
             )}
-
-            {/* محتوای اصلی */}
-            <main
-                className={`flex-1 transition-all duration-300 pt-16 lg:pt-0 ${
-                    isCollapsed ? 'lg:mr-20' : 'lg:mr-64'
-                }`}
-            >
-                <div className="p-4 md:p-6 max-w-7xl mx-auto">
-                    {children}
-                </div>
-            </main>
         </div>
     );
 }

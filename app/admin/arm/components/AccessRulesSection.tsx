@@ -3,7 +3,7 @@
 
 import React, { useState } from 'react';
 import { UseFormWatch, UseFormSetValue } from 'react-hook-form';
-import { Save, Loader2, Check, Shield, Building2, Users, Lock, Phone, MapPin, AlertTriangle } from 'lucide-react';
+import { Save, Loader2, Check, Shield, Building2, Users, Lock, Phone, MapPin, AlertTriangle, Zap } from 'lucide-react';
 
 interface AccessRulesSectionProps {
     watch: UseFormWatch<any>;
@@ -16,7 +16,15 @@ interface AccessRulesSectionProps {
 export function AccessRulesSection({ watch, setValue, onSave, isSaving, isAdmin = false }: AccessRulesSectionProps) {
     const [saved, setSaved] = useState(false);
     const rules = watch('config.accessRules') || {};
-    const setRule = (key: string, value: any) => setValue('config.accessRules', { ...rules, [key]: value });
+
+    // ⭐ ست کردن یه rule خاص
+    const setRule = (key: string, value: any) => {
+        const updated = { ...rules, [key]: value };
+
+        // ⭐ اگر autoJoinOnEntry فعال شد، محدودیت صنفی رو می‌تونیم تنظیم کنیم
+        // ولی غیرفعالش نمی‌کنیم - فقط به مدیر اخطار می‌دیم
+        setValue('config.accessRules', updated);
+    };
 
     const handleSave = () => { onSave?.(); setSaved(true); setTimeout(() => setSaved(false), 2000); };
 
@@ -25,9 +33,38 @@ export function AccessRulesSection({ watch, setValue, onSave, isSaving, isAdmin 
             title: 'عضویت در بازار',
             icon: Users,
             rules: [
-                { key: 'restrictMembershipByIndustry', label: 'محدودیت صنفی برای عضویت', hint: 'فقط کسب‌وکارهایی با صنف تعریف‌شده می‌توانند عضو شوند', icon: Building2, adminOnly: true },
-                { key: 'allowManualRoleSelection', label: 'انتخاب دستی نقش', hint: 'اگر صنف کاربر در لیست نبود، خودش نقش را انتخاب کند', icon: Users, adminOnly: false, dependsOn: 'restrictMembershipByIndustry' },
-                { key: 'requireAdminApprovalForMembership', label: 'تأیید مدیر برای عضویت', hint: 'هر درخواست عضویت باید توسط مدیر تأیید شود', icon: Lock, adminOnly: false },
+                {
+                    key: 'autoJoinOnEntry',
+                    label: 'عضویت خودکار هنگام ورود',
+                    hint: 'کاربران لاگین‌کرده به‌محض ورود به بازار، عضو می‌شوند (در صورت محدودیت صنفی، فقط مشمولان)',
+                    icon: Zap,
+                    adminOnly: false,
+                    warning: rules.restrictMembershipByIndustry
+                        ? '⚠️ با محدودیت صنفی فعال، فقط کاربرانی که صنفشان در لیست باشد عضو می‌شوند'
+                        : undefined,
+                },
+                {
+                    key: 'restrictMembershipByIndustry',
+                    label: 'محدودیت صنفی برای عضویت',
+                    hint: 'فقط کسب‌وکارهایی با صنف تعریف‌شده می‌توانند عضو شوند',
+                    icon: Building2,
+                    adminOnly: true,
+                },
+                {
+                    key: 'allowManualRoleSelection',
+                    label: 'انتخاب دستی نقش',
+                    hint: 'اگر صنف کاربر در لیست نبود، خودش نقش را انتخاب کند',
+                    icon: Users,
+                    adminOnly: false,
+                    dependsOn: 'restrictMembershipByIndustry',
+                },
+                {
+                    key: 'requireAdminApprovalForMembership',
+                    label: 'تأیید مدیر برای عضویت',
+                    hint: 'هر درخواست عضویت باید توسط مدیر تأیید شود (در عضویت خودکار بی‌اثر است)',
+                    icon: Lock,
+                    adminOnly: false,
+                },
             ],
         },
         {
@@ -51,7 +88,7 @@ export function AccessRulesSection({ watch, setValue, onSave, isSaving, isAdmin 
         const Icon = rule.icon;
         const value = rules[rule.key];
         const disabled = (rule.adminOnly && !isAdmin);
-        const dependsOnRule = rule.dependsOn ? rules[rule.dependsOn] !== true : true;
+        const dependsOnRule = rule.dependsOn ? rules[rule.dependsOn] === true : true;
 
         return (
             <div key={rule.key} className={`bg-surface-container-lowest border rounded-xl p-3 transition-all ${!dependsOnRule ? 'opacity-50 pointer-events-none' : value === true ? 'border-primary/30 bg-primary/5' : 'border-outline-variant/20'}`}>
@@ -62,8 +99,17 @@ export function AccessRulesSection({ watch, setValue, onSave, isSaving, isAdmin 
                             <div className="flex items-center gap-2">
                                 <span className="text-sm font-medium">{rule.label}</span>
                                 {disabled && <span className="text-[9px] bg-purple-50 text-purple-600 px-1.5 py-0.5 rounded-full"><Lock className="w-2.5 h-2.5 inline" /> مدیر</span>}
+                                {rule.key === 'autoJoinOnEntry' && value && (
+                                    <span className="text-[9px] bg-green-50 text-green-600 px-1.5 py-0.5 rounded-full">فعال</span>
+                                )}
                             </div>
                             <p className="text-[10px] text-on-surface-variant mt-0.5">{rule.hint}</p>
+                            {rule.warning && value && (
+                                <p className="text-[10px] text-amber-600 mt-1 flex items-center gap-1">
+                                    <AlertTriangle className="w-3 h-3" />
+                                    {rule.warning}
+                                </p>
+                            )}
                         </div>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">

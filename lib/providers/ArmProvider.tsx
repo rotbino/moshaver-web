@@ -10,7 +10,6 @@ import { useArm } from '@/lib/api/apiHooks';
 import { toast } from 'sonner';
 import { apiService } from '@/lib/api/apiService';
 
-
 const PUBLIC_PATHS = [
     '/login',
     '/register',
@@ -26,6 +25,7 @@ const PUBLIC_PATHS = [
     '/terms',
     '/purchase',
     '/credit/purchase',
+    '/credit/verify',
 ];
 
 interface ArmProviderProps {
@@ -37,10 +37,13 @@ export function ArmProvider({ children }: ArmProviderProps) {
     const router = useRouter();
     const dispatch = useDispatch();
     const { currentSlug, currentArm } = useSelector((state: RootState) => state.arm);
+    const { isAuthenticated } = useSelector((state: RootState) => state.auth);
     const [isInitialized, setIsInitialized] = useState(false);
+    const [autoJoinAttempted, setAutoJoinAttempted] = useState(false);
 
     const { data: armData, isLoading: armLoading, refetch: refetchArm } = useArm(currentSlug || '');
 
+    // ⭐ ست کردن بازو توی Redux
     useEffect(() => {
         if (armData && currentSlug) {
             dispatch(setArm({ arm: armData, slug: currentSlug }));
@@ -54,22 +57,65 @@ export function ArmProvider({ children }: ArmProviderProps) {
         }
     }, [currentSlug, refetchArm, armLoading]);
 
+    // ⭐ عضویت خودکار هنگام ورود به بازار
+    // lib/providers/ArmProvider.tsx
+
+// ⭐ عضویت خودکار هنگام ورود به بازار
+    useEffect(() => {
+        if (!armData || !isAuthenticated || autoJoinAttempted) return;
+
+        const config = armData.config || {};
+        const autoJoinOnEntry = config?.accessRules?.autoJoinOnEntry === true;
+
+        if (!autoJoinOnEntry) return;
+
+        const checkAndJoin = async () => {
+            try {
+                const userArms = await apiService.arm.getUserArms();
+                const isAlreadyMember = userArms.some((a: any) => a.slug === currentSlug);
+
+                if (!isAlreadyMember) {
+                    await apiService.arm.join(currentSlug!);
+                    toast.success('به‌طور خودکار عضو بازار شدید');
+
+                    // ⭐ ریلود دیتای بازو برای آپدیت membership count
+                    const updatedArm = await apiService.arm.fetchArmData(currentSlug!);
+                    dispatch(setArm({ arm: updatedArm, slug: currentSlug! }));
+                }
+            } catch (error: any) {
+                if (error?.data?.errorCode === 'INDUSTRY_NOT_ALLOWED') {
+                   // toast.error('صنف شما مجاز به عضویت در این بازار نیست');
+                } else if (error?.data?.errorCode === 'ALREADY_MEMBER') {
+                    // هیچی
+                } else {
+                    console.error('Auto-join failed:', error);
+                }
+            } finally {
+                setAutoJoinAttempted(true);
+            }
+        };
+
+        checkAndJoin();
+    }, [armData, isAuthenticated, currentSlug, autoJoinAttempted]);
+
+    // ⭐ ریست autoJoinAttempted وقتی مسیر عوض میشه
+    useEffect(() => {
+        setAutoJoinAttempted(false);
+    }, [currentSlug]);
+
+    // ⭐ لود اولیه بازو
     useEffect(() => {
         const initArm = async () => {
-            // ۱. اگر در صفحات عمومی هستیم، کاری نکن
             if (PUBLIC_PATHS.some(path => pathname === path || pathname?.startsWith(`${path}/`))) {
                 setIsInitialized(true);
                 return;
             }
 
-            // ۲. تشخیص مسیر بازار: /:slug
             const firstSegment = pathname?.split('/').filter(Boolean)[0];
 
-            // اگر مسیر یک اسلاگ معتبر است (مثلاً /barton)
             if (pathname?.startsWith('/') && pathname !== '/' && !PUBLIC_PATHS.some(p => pathname?.startsWith(p))) {
                 const slug = firstSegment;
 
-                // اگر اسلاگ با اسلاگ فعلی فرق داره، بازار رو بارگذاری کن
                 if (slug && slug !== currentSlug) {
                     dispatch(setArmLoading(true));
                     try {
@@ -85,7 +131,6 @@ export function ArmProvider({ children }: ArmProviderProps) {
                     } catch (error) {
                         console.error('Error loading arm:', error);
                         dispatch(setArmError('خطا در دریافت اطلاعات بازار'));
-                        //toast.error('خطا در دریافت اطلاعات بازار');
                         router.replace('/no-arm');
                         setIsInitialized(true);
                         return;
@@ -96,7 +141,6 @@ export function ArmProvider({ children }: ArmProviderProps) {
                 return;
             }
 
-            // ۳. اگر بازارفعلی وجود نداره و در صفحه اصلی هستیم
             if (!currentSlug && pathname === '/') {
                 const lastSlug = localStorage.getItem('lastArmSlug');
                 if (lastSlug) {
@@ -107,7 +151,6 @@ export function ArmProvider({ children }: ArmProviderProps) {
                 return;
             }
 
-            // ۴. اگر بازارفعال وجود داره و اطلاعاتش توی استور نیست
             if (currentSlug && !currentArm) {
                 dispatch(setArmLoading(true));
                 try {
@@ -121,7 +164,6 @@ export function ArmProvider({ children }: ArmProviderProps) {
                 } catch (error) {
                     console.error('Error fetching arm:', error);
                     dispatch(setArmError('خطا در دریافت اطلاعات بازار'));
-                    //toast.error('خطا در دریافت اطلاعات بازار');
                 }
             }
 

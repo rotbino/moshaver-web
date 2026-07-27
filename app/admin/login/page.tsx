@@ -93,7 +93,7 @@ export default function AdminLoginPage() {
             dispatch(setUser(loginResponse.user));
             dispatch(setAccessToken(loginResponse.access_token));
 
-            if (loginResponse.user.role !== 'admin' && loginResponse.user.role !== 'arm_manager') {
+            if (loginResponse.user.role !== 'system_admin' && loginResponse.user.role !== 'arm_manager') {
                 toast.error('شما دسترسی به پنل ادمین را ندارید');
                 setIsLoading(false);
                 return;

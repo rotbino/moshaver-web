@@ -16,6 +16,8 @@ import { LocationSelector } from './LocationSelector';
 import { IndustrySelector } from './IndustrySelector';
 import { AccessRulesSection } from './AccessRulesSection';
 import { ModuleSettingsSection } from './ModuleSettingsSection';
+import {FormLabelsSection} from "@/app/admin/arm/components/FormLabelsSection";
+import {EconomySection} from "@/app/admin/arm/components/EconomySection";
 
 interface ArmFormProps {
     initialData?: any;
@@ -26,7 +28,8 @@ interface ArmFormProps {
 
 export function ArmForm({ initialData, onSubmit, isSubmitting = false, isEditMode = false }: ArmFormProps) {
     const { user } = useSelector((state: RootState) => state.auth);
-    const isAdmin = user?.role === 'admin';
+    // ✅ اصلاح: هم system_admin و هم system_super_admin رو پوشش بده
+    const isSystemAdmin = user?.role === 'system_admin' || user?.role === 'system_super_admin';
     const searchParams = useSearchParams();
     const router = useRouter();
 
@@ -65,6 +68,7 @@ export function ArmForm({ initialData, onSubmit, isSubmitting = false, isEditMod
                 supplierIndustryIds: [], buyerIndustryIds: [],
                 localization: { timezone: 'Asia/Tehran', locale: 'fa' },
                 integrations: {}, custom: {}, allowedCategoryScope: [],
+                formLabels: {},
             },
         },
     });
@@ -95,10 +99,12 @@ export function ArmForm({ initialData, onSubmit, isSubmitting = false, isEditMod
         { id: 'general', label: 'عمومی', icon: '🏠' },
         { id: 'modules', label: 'ماژول‌ها', icon: '🧩' },
         { id: 'access', label: 'دسترسی', icon: '🔐' },
+        { id: 'economy', label: 'اقتصاد', icon: '💰' },
         { id: 'payment', label: 'پرداخت', icon: '💳' },
         { id: 'categories', label: 'دسته‌بندی‌ها', icon: '📂' },
         { id: 'locations', label: 'موقعیت‌ها', icon: '📍' },
         { id: 'industries', label: 'صنوف', icon: '🏭' },
+        { id: 'labels', label: 'برچسب‌ها', icon: '🏷️' },
     ];
 
     return (
@@ -121,7 +127,17 @@ export function ArmForm({ initialData, onSubmit, isSubmitting = false, isEditMod
             </div>
 
             <div className="space-y-6">
-                {activeTab === 'general' && <GeneralSection register={register} armId={initialData?.id} errors={errors} watch={watch} setValue={setValue} />}
+                {/* ✅ اینجا isSystemAdmin رو پاس بده */}
+                {activeTab === 'general' && (
+                    <GeneralSection
+                        register={register}
+                        armId={initialData?.id}
+                        errors={errors}
+                        watch={watch}
+                        setValue={setValue}
+                        isSystemAdmin={isSystemAdmin}  // ← این خط رو اضافه کن
+                    />
+                )}
 
                 {activeTab === 'modules' && (
                     <div className="space-y-6">
@@ -129,21 +145,27 @@ export function ArmForm({ initialData, onSubmit, isSubmitting = false, isEditMod
                         <ModuleSettingsSection watch={watch} setValue={setValue} onSave={handleAutoSave} isSaving={isSubmitting || isAutoSaving} moduleKey="buyLead" moduleName="تابلوی درخواست خرید" moduleIcon={ShoppingCart} />
                     </div>
                 )}
-                {activeTab === 'access' && <AccessRulesSection watch={watch} setValue={setValue} onSave={handleAutoSave} isSaving={isSubmitting || isAutoSaving} isAdmin={isAdmin} />}
+                {activeTab === 'access' && <AccessRulesSection watch={watch} setValue={setValue} onSave={handleAutoSave} isSaving={isSubmitting || isAutoSaving} isAdmin={isSystemAdmin} />}
                 {activeTab === 'payment' && <PaymentSection register={register} errors={errors} watch={watch} setValue={setValue} control={control} />}
                 {activeTab === 'categories' && (
                     <div className="space-y-6">
-                        {(isAdmin || !isEditMode) && (
-                            <CategoryScopeSelector watch={watch} setValue={setValue} disabled={isEditMode && !isAdmin}
+                        {(isSystemAdmin || !isEditMode) && (
+                            <CategoryScopeSelector watch={watch} setValue={setValue} disabled={isEditMode && !isSystemAdmin}
                                                    categorySelections={watch('config.categorySelections')} onSave={handleAutoSave}
                                                    activeScopeId={activeScopeId} onScopeSelect={setActiveScopeId} />
                         )}
-                        <CategorySelector control={control} watch={watch} setValue={setValue} disabled={isEditMode && !isAdmin}
+                        <CategorySelector control={control} watch={watch} setValue={setValue} disabled={isEditMode && !isSystemAdmin}
                                           onSave={handleAutoSave} activeScopeId={activeScopeId} />
                     </div>
                 )}
                 {activeTab === 'locations' && <LocationSelector control={control} watch={watch} setValue={setValue} onSave={handleAutoSave} />}
                 {activeTab === 'industries' && <IndustrySelector register={register} watch={watch} setValue={setValue} />}
+                {activeTab === 'labels' && (
+                    <FormLabelsSection watch={watch} setValue={setValue} onSave={handleAutoSave} isSaving={isSubmitting || isAutoSaving} isAdmin={isSystemAdmin} />
+                )}
+                {activeTab === 'economy' && (
+                    <EconomySection watch={watch} setValue={setValue} onSave={handleAutoSave} isSaving={isSubmitting || isAutoSaving} />
+                )}
             </div>
         </form>
     );

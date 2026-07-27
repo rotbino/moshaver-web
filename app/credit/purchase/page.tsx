@@ -155,9 +155,10 @@ export default function PurchaseCreditPage() {
 
             // ✅ اگر پرداخت آنلاین و آدرس پرداخت وجود داشت، هدایت کن
             if (paymentMethod === 'online' && result.payment_url) {
+                debugger
                 window.location.href = result.payment_url;
             } else {
-                toast.success('درخواست خرید با موفقیت ثبت شد');
+                toast.success('درخواست خرید ثبت شد');
                 await refetchBalance();
                 router.push('/profile');
             }

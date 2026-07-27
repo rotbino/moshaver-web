@@ -57,7 +57,7 @@ interface Member {
         province: string;
         trustScore: number;
     } | null;
-    role: 'viewer' | 'seller' | 'buyer' | 'admin';
+    role: 'viewer' | 'seller' | 'buyer' | 'system_admin';
     roleType?: 'seller' | 'buyer' | null;
     status: 'active' | 'paused' | 'banned';
     joinedAt: string;
@@ -66,7 +66,7 @@ interface Member {
 
 type SortField = 'joinedAt' | 'user.fullName' | 'user.phone' | 'role' | 'status';
 type SortOrder = 'asc' | 'desc';
-type RoleFilter = 'all' | 'admin' | 'seller' | 'buyer' | 'viewer';
+type RoleFilter = 'all' | 'system_admin' | 'seller' | 'buyer' | 'viewer';
 type StatusFilter = 'all' | 'active' | 'paused' | 'banned';
 
 export default function ArmAdminMembers() {
@@ -147,7 +147,7 @@ export default function ArmAdminMembers() {
     const stats = useMemo(() => {
         const total = members.length;
         const active = members.filter(m => m.status === 'active').length;
-        const admins = members.filter(m => m.role === 'admin').length;
+        const admins = members.filter(m => m.role === 'system_admin').length;
         const sellers = members.filter(m => m.role === 'seller').length;
         const buyers = members.filter(m => m.role === 'buyer').length;
         return { total, active, admins, sellers, buyers };
@@ -204,7 +204,7 @@ export default function ArmAdminMembers() {
                 "inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full border",
                 styles[role as keyof typeof styles] || styles.viewer
             )}>
-                {role === 'admin' && <Crown className="w-3 h-3" />}
+                {role === 'system_admin' && <Crown className="w-3 h-3" />}
                 {labels[role as keyof typeof labels] || role}
             </span>
         );

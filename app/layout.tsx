@@ -7,6 +7,7 @@ import {Providers} from "@/lib/providers/providers";
 import {ArmProvider} from "@/lib/providers/ArmProvider";
 import {MembershipBanner} from "@/app/components";
 import {ThemeProvider} from "@/lib/providers/ThemeProvider";
+import {FloatingAdminButton} from "@/app/components/FloatingAdminButton";
 
 // ✅ تنظیم فونت وزیر با اعداد فارسی
 const vazirmatn = Vazirmatn({
@@ -41,6 +42,7 @@ export default function RootLayout({
                     <ArmProvider>
                         <MembershipBanner />
                         {children}
+                        <FloatingAdminButton />
                     </ArmProvider>
                 </ThemeProvider>
             </Providers>

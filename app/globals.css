@@ -285,3 +285,18 @@ select:focus {
   vertical-align: middle;
   line-height: 1;
 }
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-in {
+  animation: fadeIn 0.2s ease-out forwards;
+}

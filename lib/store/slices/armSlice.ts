@@ -23,6 +23,8 @@ export interface ArmData {
     categorySelections?: any[];
     locationTree?: any[]; // ✅ اضافه شد
     geoScopes?: any[]; // برای سازگاری با نسخه قبلی
+    isArmOwner?: boolean;      // ← اضافه شد
+    isSystemAdmin?: boolean;   // ← اضافه شد
 }
 
 interface ArmState {
