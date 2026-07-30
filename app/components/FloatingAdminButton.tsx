@@ -19,7 +19,7 @@ export function FloatingAdminButton() {
     // ✅ از بک‌اند میاد
     const isArmOwner = currentArm?.isArmOwner || false;
 
-    // اگر نه مدیر سیستم هست و نه مدیر بازو، چیزی نشون نده
+    // اگر نه مدیر سیستم هست و نه مالک بازار، چیزی نشون نده
     if (!isSystemAdmin && !isArmOwner) return null;
 
     const hasBoth = isSystemAdmin && isArmOwner;
@@ -36,7 +36,7 @@ export function FloatingAdminButton() {
                             className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-surface-container-high dark:hover:bg-gray-800 transition-all text-sm text-on-surface dark:text-gray-200"
                         >
                             <Settings className="w-4 h-4 text-primary" />
-                            پنل مدیریت سیستم
+                            پنل سیستم
                         </Link>
                     )}
                     {isArmOwner && (
@@ -46,7 +46,7 @@ export function FloatingAdminButton() {
                             className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-surface-container-high dark:hover:bg-gray-800 transition-all text-sm text-on-surface dark:text-gray-200"
                         >
                             <LayoutDashboard className="w-4 h-4 text-emerald-500" />
-                            پنل مدیریت بازار
+                            پنل بازار
                         </Link>
                     )}
                     {hasBoth && (

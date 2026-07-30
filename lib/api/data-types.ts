@@ -38,16 +38,3 @@ export const BUSINESS_TYPES = [
     { label: 'سایر', value: 'other' },
 ];
 
-// ============================================================
-// واحدهای اندازه‌گیری
-// ============================================================
-export const UNITS = [
-    { label: 'کیلوگرم', value: 'kg' },
-    { label: 'تن', value: 'ton' },
-    { label: 'عدد', value: 'piece' },
-    { label: 'متر', value: 'meter' },
-    { label: 'کیلومتر', value: 'kilometer' },
-    { label: 'لیتر', value: 'liter' },
-    { label: 'متر مربع', value: 'square_meter' },
-    { label: 'متر مکعب', value: 'cubic_meter' },
-];

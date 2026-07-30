@@ -29,6 +29,7 @@ export const apiService = {
             apiRequest('/auth/register', { method: 'POST', data }),
         updateProfile: (data: { fullName: string }): Promise<User> =>
             apiRequest('/auth/profile', { method: 'PUT', data }),
+        getProfile: (): Promise<User> => apiRequest('/auth/me'),
     },
 
 
@@ -55,6 +56,9 @@ export const apiService = {
 
         delete: (id: string): Promise<{ message: string }> =>
             apiRequest(`/business/${id}`, { method: 'DELETE' }),
+
+        requestVerification: (businessId: string, data: any): Promise<Business> =>
+            apiRequest(`/business/${businessId}/verify`, { method: 'POST', data }),
     },
 
     // ============================================================
@@ -162,7 +166,7 @@ export const apiService = {
 
         // ... بقیه متدها
 
-        // 🆕 متدهای جدید برای مدیر بازو
+        // 🆕 متدهای جدید برای مالک بازار
         getArmPayments: (slug: string, status?: string): Promise<any> =>
             apiRequest(`/credit/arm/${slug}/payments`, { params: { status } }),
 
@@ -282,8 +286,9 @@ export const apiService = {
         categories: {
             getAll: (): Promise<any[]> =>
                 apiRequest('/admin/categories'),
-            getAllFlat: (): Promise<any[]> =>
-                apiRequest('/admin/categories/flat'),
+            getAllFlat: (slug?: string): Promise<any[]> => {
+                const url = slug ? `/admin/categories/flat?slug=${slug}` : '/admin/categories/flat';
+                return apiRequest(url);},
             getOne: (id: string): Promise<any> =>
                 apiRequest(`/admin/categories/${id}`),
             create: (data: any): Promise<any> =>
@@ -388,11 +393,16 @@ export const apiService = {
             getList: (params?: any): Promise<any> => apiRequest('/admin/payments', { params }),
             getStats: (params?: any): Promise<any> => apiRequest('/admin/payments/stats', { params }),
         },
+        businesses: {
+            getList: (params: any): Promise<any> => apiRequest('/admin/businesses', { params }),
+            getDetail: (id: string): Promise<any> => apiRequest(`/admin/businesses/${id}`),
+            verify: (id: string, data: any): Promise<any> => apiRequest(`/admin/businesses/${id}/verify`, { method: 'POST', data }),
+        },
 
     },
 
     // ============================================================
-    // ✅ سرویس‌های مدیر بازو (arm-admin)
+    // ✅ سرویس‌های مالک بازار (arm-admin)
     // ============================================================
     armAdmin: {
         // دریافت اطلاعات کامل بازو
@@ -445,7 +455,12 @@ export const apiService = {
         // ✅ دریافت گزارش مالی بازو
         getFinancialReport: (slug: string, params?: { startDate?: string; endDate?: string }): Promise<any> =>
             apiRequest(`/arm-admin/${slug}/financial/report`, { params }),
+        getCategories: (slug: string): Promise<any[]> =>
+            apiRequest(`/arm-admin/${slug}/categories`),
 
+        // ✅ دریافت واحدهای یک دسته‌بندی برای مالک بازار
+        getCategoryUnits: (slug: string, categoryId: string): Promise<any[]> =>
+            apiRequest(`/arm-admin/${slug}/categories/${categoryId}/units`),
 
         // ============================================================
         // مدیریت اعضا

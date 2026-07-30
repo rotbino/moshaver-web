@@ -15,7 +15,7 @@ export function ThemeToggle({ className }: { className?: string }) {
     const modes: { id: ThemeMode; icon: any; label: string }[] = [
         { id: 'light', icon: Sun, label: 'روشن' },
         { id: 'dark', icon: Moon, label: 'تاریک' },
-        { id: 'system', icon: Monitor, label: 'سیستم' },
+        //{ id: 'system', icon: Monitor, label: 'سیستم' },
     ];
 
     const cycleTheme = () => {

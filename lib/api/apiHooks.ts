@@ -71,7 +71,7 @@ export const useCreateBusiness = () => {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['businesses'] });
             queryClient.invalidateQueries({ queryKey: ['business', 'active'] });
-            toast.success('کسب‌وکار با موفقیت ثبت شد');
+           // toast.success('کسب‌وکار با موفقیت ثبت شد');
         },
         onError: (error: ApiError) => {
             if (error.data?.errorCode === 'DUPLICATE_BUSINESS_NAME') {

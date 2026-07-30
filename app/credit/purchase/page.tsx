@@ -365,7 +365,7 @@ export default function PurchaseCreditPage() {
                         {!onlineAvailable && !manualAvailable && (
                             <div className="bg-warning/10 border border-warning/20 p-3 rounded-lg flex items-start gap-2 text-sm text-warning">
                                 <Info className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                                <p>هیچ روش پرداختی برای این بازار فعال نیست. لطفاً با مدیر بازار تماس بگیرید.</p>
+                                <p>هیچ روش پرداختی برای این بازار فعال نیست. لطفاً با مالک بازار تماس بگیرید.</p>
                             </div>
                         )}
                     </div>

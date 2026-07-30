@@ -1,7 +1,7 @@
 // app/profile/page.tsx
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '@/lib/store/store';
@@ -13,9 +13,10 @@ import { RefreshModal } from '@/app/ad/RefreshModal';
 import { EditModal } from '@/app/ad/EditModal';
 import {
     User, Building2, Package, PlusCircle, Edit, CreditCard,
-    Factory, AlertTriangle, Key, BadgeCheck, RefreshCw, Pencil,
-    Phone, MapPin, Briefcase, Award, Shield, Sparkles,
-    Tag, Clock, TrendingUp, Store, ChevronLeft, Layers,
+    Factory, AlertTriangle, Key, BadgeCheck, Pencil,
+    Phone, MapPin, Shield, Sparkles,
+    TrendingUp, Store, Layers, LayoutDashboard, Settings,
+    Clock, XCircle,
 } from 'lucide-react';
 import { ChangePasswordModal } from '@/app/register/ChangePasswordModal';
 import { getApiUrl } from '@/lib/api/apiRequest';
@@ -38,11 +39,56 @@ export default function ProfilePage() {
     const [selectedAd, setSelectedAd] = useState<any>(null);
     const [isRefreshModalOpen, setIsRefreshModalOpen] = useState(false);
     const [isEditAdModalOpen, setIsEditAdModalOpen] = useState(false);
+    const [isArmOwner, setIsArmOwner] = useState(false);
 
     const hasTemporaryPassword = user?.temporaryPassword === true;
     const hasBusiness = !!business;
     const logoUrl = business?.logoUrl ? getApiUrl(`/file/${business.logoUrl}`) : null;
     const avatarUrl = user?.avatarFileId ? getApiUrl(`/file/${user.avatarFileId}`) : null;
+    const isSystemAdmin = user?.role === 'system_admin';
+
+    // محاسبه درصد تکمیل پروفایل کسب‌وکار
+    const completionPercentage = useMemo(() => {
+        if (!business) return 0;
+        const name = business.name ? 15 : 0;
+        const shortDesc = business.shortDescription ? 10 : 0;
+        const type = business.type ? 15 : 0;
+        const location = business.province && business.city ? 15 : 0;
+        const activities = (business.activities?.length || 0) > 0 ? 15 : 0;
+        const phone = business.phone ? 10 : 0;
+        const desc = business.description ? 10 : 0;
+        const position = business.position ? 10 : 0;
+        return name + shortDesc + type + location + activities + phone + desc + position;
+    }, [business]);
+
+    const isComplete = completionPercentage === 100;
+
+
+
+    // وضعیت‌های تیک اعتماد
+    const isPending = business?.verificationStatus === 'pending';
+    const isRejected = business?.verificationStatus === 'rejected';
+    const isApproved = business?.verificationStatus === 'approved';
+    const currentTier = business?.verificationTier;
+    const hasApprovedTier = isApproved && currentTier !== 'none';
+    const isGold = currentTier === 'gold' && isApproved;
+    const canRequestInitial = isComplete && !isPending && !hasApprovedTier && !isRejected;
+    const canUpgrade = hasApprovedTier && !isGold && !isPending;
+    const canRequest = isComplete && !isPending && !hasApprovedTier && !isRejected;
+
+    useEffect(() => {
+        const checkArmOwner = async () => {
+            if (!user) return;
+            try {
+                const arms = await apiService.arm.getUserArms();
+                const isOwner = arms.some((a: any) => a.role === 'arm_owner');
+                setIsArmOwner(isOwner);
+            } catch (error) {
+                console.error('Error checking arm owner:', error);
+            }
+        };
+        checkArmOwner();
+    }, [user]);
 
     const handleProfileUpdate = async (data: { fullName: string; avatarUrl?: string; password?: string }) => {
         try {
@@ -100,7 +146,8 @@ export default function ProfilePage() {
 
                     {/* ستون چپ: پروفایل + اطلاعات */}
                     <div className="lg:col-span-1 space-y-6">
-                        {/* کارت پروفایل */}
+
+                        {/* ═══════════════ کارت پروفایل - دسکتاپ ═══════════════ */}
                         <div className="bg-white dark:bg-gray-900 rounded-2xl border border-outline-variant/50 dark:border-gray-700 p-6 shadow-sm">
                             <div className="flex flex-col items-center text-center">
                                 <div className="relative mb-4">
@@ -115,13 +162,39 @@ export default function ProfilePage() {
                                         <Pencil className="w-3.5 h-3.5" />
                                     </button>
                                 </div>
-                                <h1 className="text-lg font-bold text-on-surface dark:text-gray-100">{user?.fullName && user.fullName !== '' && user.fullName !== 'کاربر مهمان' ? user.fullName : 'بی‌نام'}</h1>
+                                <h1 className="text-lg font-bold text-on-surface dark:text-gray-100">
+                                    {user?.fullName && user.fullName !== '' && user.fullName !== 'کاربر مهمان' ? user.fullName : 'بی‌نام'}
+                                </h1>
                                 <p className="text-sm text-on-surface-variant dark:text-gray-400 mt-1">{user?.phone || ''}</p>
                                 {hasBusiness && (
                                     <span className="inline-flex items-center gap-1 mt-3 px-3 py-1 bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-400 text-xs rounded-full font-medium">
                                         <Store className="w-3 h-3" />
                                         {business.type === 'wholesaler' ? 'عمده‌فروش' : 'خریدار'}
                                     </span>
+                                )}
+
+                                {/* دکمه‌های مدیریت */}
+                                {(isSystemAdmin || isArmOwner) && (
+                                    <div className="w-full mt-4 pt-4 border-t border-outline-variant/30 dark:border-gray-700 flex flex-row gap-2 flex-wrap justify-center">
+                                        {isSystemAdmin && (
+                                            <button
+                                                onClick={() => router.push('/admin')}
+                                                className="flex items-center justify-center gap-1.5 px-4 py-2 bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-400 rounded-lg text-[13px] font-medium hover:bg-primary/20 dark:hover:bg-primary/30 transition-all whitespace-nowrap"
+                                            >
+                                                <Settings className="w-4 h-4" />
+                                                پنل ادمین
+                                            </button>
+                                        )}
+                                        {isArmOwner && (
+                                            <button
+                                                onClick={() => router.push('/arm-admin')}
+                                                className="flex items-center justify-center gap-1.5 px-4 py-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-lg text-[13px] font-medium hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-all whitespace-nowrap"
+                                            >
+                                                <LayoutDashboard className="w-4 h-4" />
+                                                پنل مدیریت بازار
+                                            </button>
+                                        )}
+                                    </div>
                                 )}
                             </div>
                         </div>
@@ -185,7 +258,7 @@ export default function ProfilePage() {
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-2 flex-wrap">
                                                 <h2 className="text-lg font-semibold text-on-surface dark:text-gray-100 truncate">{business.name}</h2>
-                                                {business.verificationTier !== 'none' && (
+                                                {hasApprovedTier && (
                                                     <span className="text-xs text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-2 py-0.5 rounded-full flex items-center gap-1"><BadgeCheck className="w-3 h-3" />تأیید شده</span>
                                                 )}
                                             </div>
@@ -196,7 +269,97 @@ export default function ProfilePage() {
                                         </div>
                                         <div className="flex gap-2">
                                             <button onClick={() => router.push(`/business/edit/${business.id}`)} className="px-4 py-2 bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-400 rounded-lg text-xs font-medium hover:bg-primary/20 dark:hover:bg-primary/30"><Edit className="w-4 h-4 inline ml-1" />ویرایش</button>
-                                            <button onClick={() => setIsVerificationModalOpen(true)} className="px-4 py-2 border border-outline dark:border-gray-700 text-on-surface dark:text-gray-300 rounded-lg text-xs hover:bg-surface-container-low dark:hover:bg-gray-800"><Shield className="w-4 h-4 inline ml-1" />تیک اعتماد</button>
+
+
+                                           {/*  ========== کارت‌های تیک اعتماد (جایگزین کامل بخش قبلی) ==========*/}
+                                            {isPending && (
+                                                <div className="bg-yellow-50 border-2 border-yellow-300 rounded-2xl p-3  mb-4">
+                                                    <div className="flex items-center gap-4">
+                                                        <Clock className="w-8 h-8 text-yellow-500" />
+                                                        <div>
+                                                            <h3 className="font-semibold text-on-surface dark:text-gray-100">در انتظار دریافت تیک</h3>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {isRejected && (
+                                                <div className="bg-red-50 border-2 border-red-300 rounded-2xl p-3 mb-4">
+                                                    <div className="flex flex-col  items-center justify-between gap-4">
+                                                        <div className="flex items-center gap-4">
+                                                            <XCircle className="w-8 h-8 text-red-500" />
+                                                            <div>
+                                                                <h3 className="font-semibold text-[10px] text-on-surface dark:text-gray-100">درخواست شما رد شد</h3>
+                                                                <p className="text-[10px] text-on-surface-variant dark:text-gray-400">
+                                                                    {business.latestVerification?.notes
+                                                                        ? `دلیل: ${business.latestVerification.notes}`
+                                                                        : 'با پشتیبان خود تماس بگیرید.(09196421264).'}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                        <button
+                                                            onClick={() => setIsVerificationModalOpen(true)}
+                                                            className="flex text-[10px] items-center gap-2 px-2 py-1.5 bg-primary text-on-primary rounded-xl hover:bg-primary/90 transition-all text-sm font-medium whitespace-nowrap"
+                                                        >
+                                                            <BadgeCheck className="w-4 h-4" />
+                                                            ارسال مجدد
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {hasApprovedTier && (
+                                                <div className="bg-primary/5 border-2 border-primary/30 rounded-2xl p-6 mb-4">
+                                                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                                                        <div className="flex items-center gap-4">
+                                                            <BadgeCheck className="w-8 h-8 text-primary" />
+                                                            <div>
+                                                                <h3 className="font-semibold text-on-surface dark:text-gray-100">
+                                                                     {currentTier === 'blue' ? 'آبی' : currentTier === 'silver' ? 'نقره‌ای' : 'طلایی'}
+                                                                </h3>
+                                                               {/* <p className="text-sm text-on-surface-variant dark:text-gray-400">
+                                                                    {isGold ? 'بالاترین سطح اعتماد را کسب کرده‌اید.' : 'می‌توانید برای ارتقاء به سطح بالاتر اقدام کنید.'}
+                                                                </p>*/}
+                                                            </div>
+                                                        </div>
+                                                        {canUpgrade && (
+                                                            <button
+                                                                onClick={() => setIsVerificationModalOpen(true)}
+                                                                className="flex items-center gap-2 px-3 py-2.5 bg-primary text-on-primary rounded-xl hover:bg-primary/90 transition-all text-sm font-medium whitespace-nowrap"
+                                                            >
+                                                                ارتقاء
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {canRequestInitial && (
+                                                <div className="bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 dark:from-primary/10 dark:via-primary/15 dark:to-primary/10 border-2 border-primary/30 dark:border-primary/40 rounded-2xl p-6 mb-4 shadow-sm">
+                                                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="w-14 h-14 rounded-full bg-primary/20 dark:bg-primary/30 flex items-center justify-center flex-shrink-0">
+                                                                <Shield className="w-8 h-8 text-primary" />
+                                                            </div>
+                                                            <div>
+                                                                <h3 className="text-base font-semibold text-on-surface dark:text-gray-100 flex items-center gap-2">
+                                                                    اطلاعات کسب‌وکار شما کامل است! ✅
+                                                                </h3>
+                                                                <p className="text-sm text-on-surface-variant dark:text-gray-400">
+                                                                    اکنون می‌توانید برای دریافت تیک اعتماد اقدام کنید.
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                        <button
+                                                            onClick={() => setIsVerificationModalOpen(true)}
+                                                            className="flex items-center gap-2 px-6 py-2.5 bg-primary text-on-primary rounded-xl hover:bg-primary/90 transition-all text-sm font-medium whitespace-nowrap"
+                                                        >
+                                                            <BadgeCheck className="w-4 h-4" />
+                                                            دریافت تیک اعتماد
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                     {/* آمار */}
@@ -270,24 +433,58 @@ export default function ProfilePage() {
                     </div>
                 </div>
 
-                {/* ═══════════════ موبایل: مثل قبل ═══════════════ */}
+                {/* ═══════════════ موبایل ═══════════════ */}
                 <div className="lg:hidden space-y-6">
-                    {/* کارت پروفایل */}
+
+                    {/* کارت پروفایل موبایل */}
                     <div className="bg-white dark:bg-gray-900 rounded-2xl border border-outline-variant/50 dark:border-gray-700 p-6 shadow-sm">
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
-                            <div className="relative">
-                                <div className="w-20 h-20 rounded-full bg-primary/10 dark:bg-primary/20 flex items-center justify-center border-2 border-primary/20 dark:border-primary/30 overflow-hidden">
-                                    {avatarUrl ? <img src={avatarUrl} alt={user?.fullName || 'کاربر'} className="w-full h-full object-cover" /> : <User className="w-10 h-10 text-primary" />}
+                        <div className="flex flex-col items-center text-center">
+                            <div className="relative mb-4">
+                                <div className="w-24 h-24 rounded-full bg-primary/10 dark:bg-primary/20 flex items-center justify-center border-4 border-primary/20 dark:border-primary/30 overflow-hidden">
+                                    {avatarUrl ? (
+                                        <img src={avatarUrl} alt={user?.fullName || 'کاربر'} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <User className="w-12 h-12 text-primary" />
+                                    )}
                                 </div>
-                                <button onClick={() => setIsEditModalOpen(true)} className="absolute -bottom-1 -right-1 bg-primary text-white p-1.5 rounded-full shadow-lg"><Pencil className="w-3.5 h-3.5" /></button>
+                                <button onClick={() => setIsEditModalOpen(true)} className="absolute -bottom-1 -right-1 bg-primary text-white p-1.5 rounded-full shadow-lg hover:bg-primary/90 transition-colors">
+                                    <Pencil className="w-3.5 h-3.5" />
+                                </button>
                             </div>
-                            <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-3">
-                                    <h1 className="text-xl font-bold text-on-surface dark:text-gray-100 truncate">{user?.fullName && user.fullName !== '' && user.fullName !== 'کاربر مهمان' ? user.fullName : 'بی‌نام'}</h1>
-                                    {hasBusiness && <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-400 text-xs rounded-full"><Store className="w-3 h-3" />{business.type === 'wholesaler' ? 'عمده‌فروش' : 'خریدار'}</span>}
+                            <h1 className="text-lg font-bold text-on-surface dark:text-gray-100">
+                                {user?.fullName && user.fullName !== '' && user.fullName !== 'کاربر مهمان' ? user.fullName : 'بی‌نام'}
+                            </h1>
+                            <p className="text-sm text-on-surface-variant dark:text-gray-400 mt-1">{user?.phone || ''}</p>
+                            {hasBusiness && (
+                                <span className="inline-flex items-center gap-1 mt-3 px-3 py-1 bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-400 text-xs rounded-full font-medium">
+                                    <Store className="w-3 h-3" />
+                                    {business.type === 'wholesaler' ? 'عمده‌فروش' : 'خریدار'}
+                                </span>
+                            )}
+
+                            {/* دکمه‌های مدیریت موبایل */}
+                            {(isSystemAdmin || isArmOwner) && (
+                                <div className="w-full mt-4 pt-4 border-t border-outline-variant/30 dark:border-gray-700 flex flex-row flex-wrap justify-center gap-2">
+                                    {isSystemAdmin && (
+                                        <button
+                                            onClick={() => router.push('/admin')}
+                                            className="flex items-center justify-center gap-1 px-2.5 py-1.5 bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-400 rounded-lg text-[10px] font-medium hover:bg-primary/20 dark:hover:bg-primary/30 transition-all whitespace-nowrap flex-shrink-0"
+                                        >
+                                            <Settings className="w-3 h-3" />
+                                            پنل ادمین
+                                        </button>
+                                    )}
+                                    {isArmOwner && (
+                                        <button
+                                            onClick={() => router.push('/arm-admin')}
+                                            className="flex items-center justify-center gap-1 px-2.5 py-1.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-lg text-[10px] font-medium hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-all whitespace-nowrap flex-shrink-0"
+                                        >
+                                            <LayoutDashboard className="w-3 h-3" />
+                                            پنل مدیریت بازار
+                                        </button>
+                                    )}
                                 </div>
-                                <p className="text-sm text-on-surface-variant dark:text-gray-400 mt-1">{user?.phone || ''}</p>
-                            </div>
+                            )}
                         </div>
                     </div>
 
@@ -338,8 +535,45 @@ export default function ProfilePage() {
                                     ))}
                                 </div>
                                 <div className="flex gap-2 mt-3 pt-3 border-t dark:border-gray-700">
-                                    <button onClick={() => router.push(`/business/edit/${business.id}`)} className="flex-1 py-2 bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-400 rounded-lg text-sm font-medium">ویرایش</button>
-                                    <button onClick={() => setIsVerificationModalOpen(true)} className="flex-1 py-2 border dark:border-gray-600 text-on-surface dark:text-gray-300 rounded-lg text-sm hover:bg-surface-container-low dark:hover:bg-gray-800">تیک اعتماد</button>
+                                    <button onClick={() => router.push(`/business/edit/${business.id}`)} className="min-w-24 py-2 bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-400 rounded-lg text-sm font-medium">ویرایش</button>
+
+                                    {/* ========== وضعیت تیک اعتماد موبایل ========== */}
+                                    {isPending && (
+                                        <div className="flex-1 flex items-center justify-center py-2 border border-yellow-300 dark:border-yellow-700 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 rounded-lg text-xs">
+                                            <Clock className="w-4 h-4 ml-1" />
+                                            در انتظار دریافت تیک اعتماد
+                                        </div>
+                                    )}
+                                    {isRejected && (
+                                        <div className="flex-1 flex items-center justify-center py-2 border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded-lg text-xs">
+                                            <XCircle className="w-4 h-4 ml-1" />
+                                            تیک اعتماد، رد شده
+                                            {canRequest && (
+                                                <button onClick={() => setIsVerificationModalOpen(true)} className="underline mr-1">ارسال مجدد</button>
+                                            )}
+                                        </div>
+                                    )}
+                                    {hasApprovedTier && (
+                                        <div className="flex-1 flex items-center justify-center py-2 border border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded-lg text-xs">
+                                            <BadgeCheck className="w-4 h-4 ml-1" />
+                                            تیک {currentTier === 'blue' ? 'آبی' : currentTier === 'silver' ? 'نقره‌ای' : 'طلایی'}
+                                        </div>
+                                    )}
+                                    {canRequest && (
+                                        <button onClick={() => setIsVerificationModalOpen(true)} className="flex-1 py-2 border dark:border-gray-600 text-on-surface dark:text-gray-300 rounded-lg text-sm hover:bg-surface-container-low dark:hover:bg-gray-800">
+                                            <Shield className="w-4 h-4 inline ml-1" />
+                                            تیک اعتماد
+                                        </button>
+                                    )}
+                                    {!isComplete && !isPending && !hasApprovedTier && (
+                                        <button
+                                            onClick={() => toast.warning('ابتدا اطلاعات کسب‌وکار خود را کامل کنید.')}
+                                            className="flex-1 py-2 border border-gray-300 dark:border-gray-600 text-gray-400 dark:text-gray-500 rounded-lg text-xs cursor-not-allowed"
+                                            disabled
+                                        >
+                                            تکمیل پروفایل
+                                        </button>
+                                    )}
                                 </div>
                             </div>
 
@@ -398,7 +632,17 @@ export default function ProfilePage() {
             {/* مودال‌ها */}
             <ChangePasswordModal isOpen={isPasswordModalOpen} onClose={() => setIsPasswordModalOpen(false)} onSuccess={handlePasswordChange} />
             {user && <EditProfileModal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} user={user} onUpdate={handleProfileUpdate} />}
-            {hasBusiness && <VerificationModal isOpen={isVerificationModalOpen} onClose={() => setIsVerificationModalOpen(false)} businessId={business?.id} businessName={business?.name} onSuccess={() => { toast.success('مدارک ارسال شد'); refetch(); refetchBalance(); }} />}
+            {hasBusiness && (
+                <VerificationModal
+                    isOpen={isVerificationModalOpen}
+                    onClose={() => setIsVerificationModalOpen(false)}
+                    businessId={business?.id}
+                    businessName={business?.name}
+                    currentLevel={business?.verificationTier as any || 'none'}
+                    isProfileComplete={isComplete}
+                    onSuccess={() => { toast.success('مدارک ارسال شد'); refetch(); refetchBalance(); }}
+                />
+            )}
             {selectedAd && (
                 <>
                     <RefreshModal isOpen={isRefreshModalOpen} onClose={() => { setIsRefreshModalOpen(false); setSelectedAd(null); }} ad={selectedAd} onSuccess={() => { refetch(); refetchBalance(); }} />

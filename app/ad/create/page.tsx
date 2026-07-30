@@ -13,6 +13,7 @@ import { Package, Send, Edit2, X, MapPin, Clock, Shield, ArrowDown, Info, Search
 import { ArmLocationSelector } from '@/app/components/ArmLocationSelector';
 import { NumberInput } from "@/components/common";
 import { cn } from '@/lib/utils';
+import {CategoryGridSelector} from "@/app/ad/CategoryGridSelector";
 
 export default function CreateAdPage() {
     const router = useRouter();
@@ -261,53 +262,15 @@ export default function CreateAdPage() {
                     <div className="lg:col-span-7 space-y-6">
 
                         {/* باکس دسته بندی */}
-                        <div className="bg-white p-4 rounded-2xl border border-outline-variant/50 shadow-sm">
-                            <label className="text-sm font-semibold text-on-surface block mb-3">
-                                نوع کالا و دسته‌بندی <span className="text-error">*</span>
-                            </label>
-
-                            <div className="relative mb-3">
-                                <input
-                                    type="text"
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    placeholder="جستجوی دسته‌بندی..."
-                                    className="w-full h-10 bg-surface-container-lowest border border-outline px-4 pr-10 text-sm focus:ring-1 focus:ring-primary focus:border-primary outline-none rounded-lg"
-                                />
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant pointer-events-none" />
-                            </div>
-
-                            <div className="max-h-[240px] sm:max-h-[600px] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-                                {filteredCategories.length > 0 ? (
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                        {filteredCategories.map((cat) => (
-                                            <button
-                                                key={cat.id}
-                                                type="button"
-                                                onClick={() => {
-                                                    setFormData(prev => ({ ...prev, categoryId: cat.id, minQuantity: cat.defaultMinQuantity || 0, unitPrice: 0, productType: '' }));
-                                                    setErrors(prev => ({ ...prev, categoryId: '' }));
-                                                }}
-                                                className={cn(
-                                                    "flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all text-center",
-                                                    formData.categoryId === cat.id
-                                                        ? "border-primary bg-primary/5 shadow-sm"
-                                                        : "border-outline-variant/50 hover:border-primary/30 hover:bg-surface-container-low"
-                                                )}
-                                            >
-                                                <span className={cn("text-sm font-bold leading-tight", formData.categoryId === cat.id ? "text-primary" : "text-on-surface")}>{cat.name}</span>
-                                                <span className="text-[10px] text-on-surface-variant mt-1">واحد: {cat.unitTitle}</span>
-                                            </button>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <div className="text-center py-6 text-sm text-on-surface-variant">
-                                        دسته‌بندی با نام "{searchQuery}" یافت نشد
-                                    </div>
-                                )}
-                            </div>
-                            {errors.categoryId && <p className="text-error text-xs mt-2">{errors.categoryId}</p>}
-                        </div>
+                        <CategoryGridSelector
+                            categoryTree={categoryTree || []}
+                            selectedCategoryId={formData.categoryId}
+                            onSelect={(categoryId) => {
+                                setFormData(prev => ({ ...prev, categoryId, minQuantity: 0, unitPrice: 0, productType: '' }));
+                                setErrors(prev => ({ ...prev, categoryId: '' }));
+                            }}
+                            error={errors.categoryId}
+                        />
 
                         {/* باکس نوع کالا */}
                         {selectedCategoryData && (
@@ -494,7 +457,7 @@ export default function CreateAdPage() {
                         {!autoApproveAds && (
                             <div className="bg-amber-50 text-amber-700 p-3 rounded-lg text-xs flex items-start gap-2 border border-amber-200">
                                 <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                                <p>آگهی شما پس از تأیید مدیر بازار منتشر خواهد شد.</p>
+                                <p>آگهی شما پس از تأیید مالک بازار منتشر خواهد شد.</p>
                             </div>
                         )}
 

@@ -162,7 +162,7 @@ export default function AdminUsersPage() {
                             <option value="all">همه نقش‌ها</option>
                             <option value="user">کاربر</option>
                             <option value="admin">ادمین</option>
-                            <option value="arm_manager">مدیر بازو</option>
+                            <option value="arm_manager">مالک بازار</option>
                         </select>
                         <select value={armFilter} onChange={e => setArmFilter(e.target.value)}
                                 className="bg-surface border border-outline rounded-xl h-10 px-3 text-xs">
@@ -247,7 +247,7 @@ export default function AdminUsersPage() {
                                     </div>
                                 </td>
                                 <td className="px-4 py-3 text-sm font-mono text-on-surface" dir="ltr">{u.phone}</td>
-                                <td className="px-4 py-3 text-xs">{u.role === 'system_admin' ? <span className="text-purple-600">ادمین</span> : u.role === 'arm_manager' ? 'مدیر بازو' : 'کاربر'}</td>
+                                <td className="px-4 py-3 text-xs">{u.role === 'system_admin' ? <span className="text-purple-600">ادمین</span> : u.role === 'arm_manager' ? 'مالک بازار' : 'کاربر'}</td>
                                 <td className="px-4 py-3">{getStatusBadge(u.status)}</td>
                                 <td className="px-4 py-3 text-xs text-on-surface-variant">{new Date(u.createdAt).toLocaleDateString('fa-IR')}</td>
                                 <td className="px-4 py-3 text-xs">{u._count?.armMemberships || 0} بازار</td>

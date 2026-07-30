@@ -42,6 +42,7 @@ export interface User {
     locale?: string;
     isPhoneVerified?: boolean;
     temporaryPassword?: boolean;
+    nationalId?: string;
 }
 
 export interface LoginResponse {
@@ -300,6 +301,7 @@ export interface AdListQuery {
     sort?: SortItem[];
     page?: number;
     limit?: number;
+    requireSufficientStock?: boolean;
 }
 
 export interface SortItem {
@@ -371,7 +373,7 @@ export interface DeleteFileResponse {
 
 export type PermissionLevel = 1 | 2 | 3;
 export const PERMISSION_LEVELS = {
-    1: {  // سطح پایه - مدیر بازو معمولی
+    1: {  // سطح پایه - مالک بازار معمولی
         label: 'پایه',
         canEditSlug: false,
         canEditStatus: false,
@@ -385,7 +387,7 @@ export const PERMISSION_LEVELS = {
         canEditPayment: false,
         canEditEconomy: false,
     },
-    2: {  // سطح پیشرفته - مدیر بازو سطح ۲
+    2: {  // سطح پیشرفته - مالک بازار سطح ۲
         label: 'پیشرفته',
         canEditSlug: false,
         canEditStatus: true,

@@ -86,7 +86,7 @@ export default function RegisterBusinessPage() {
                 industryId: formData.industryId || undefined,
                 armSlug: currentSlug,
             });
-            toast.success('کسب‌وکار با موفقیت ثبت شد');
+           // toast.success('کسب‌وکار با موفقیت ثبت شد');
             router.push('/profile');
         } catch (error: any) {
             toast.error(error?.message || 'خطا در ثبت کسب‌وکار');
@@ -186,7 +186,7 @@ export default function RegisterBusinessPage() {
                                 {availableIndustries.length === 0 ? (
                                     <div className="bg-error/5 dark:bg-red-900/20 text-error dark:text-red-400 p-3 rounded-xl text-xs flex items-start gap-2 border border-error/20 dark:border-red-800">
                                         <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                                        <p>هیچ صنفی برای این نقش تعریف نشده. با مدیر بازار تماس بگیرید.</p>
+                                        <p>هیچ صنفی برای این نقش تعریف نشده. با مالک بازار تماس بگیرید.</p>
                                     </div>
                                 ) : (
                                     <div className="relative">

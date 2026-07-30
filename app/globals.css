@@ -300,3 +300,164 @@ select:focus {
 .animate-in {
   animation: fadeIn 0.2s ease-out forwards;
 }
+
+/* app/globals.css */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   استایل‌های سراسری اینپوت‌ها - گردی خیلی کم (۲ پیکسل)
+   ============================================================ */
+
+@layer base {
+  input,
+  textarea,
+  select {
+    border-radius: 2px !important;
+    border: 1px solid #e5e7eb !important;
+    outline: none !important;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    background-color: #ffffff !important;
+    color: #1a1a1a !important;
+    font-size: 14px !important;
+    padding: 0 12px !important;
+    height: 40px !important;
+    width: 100% !important;
+  }
+
+  /* ========== Textarea ========== */
+  textarea {
+    height: auto !important;
+    padding: 10px 12px !important;
+    resize: vertical !important;
+  }
+
+  /* ========== Select ========== */
+  select {
+    appearance: auto !important;
+    cursor: pointer !important;
+    padding-left: 30px !important;
+  }
+
+  /* ========== Dark Mode ========== */
+  .dark input,
+  .dark textarea,
+  .dark select {
+    border-color: #374151 !important;
+    background-color: #1f2937 !important;
+    color: #e5e7eb !important;
+  }
+
+  /* ========== Focus ========== */
+  input:focus,
+  textarea:focus,
+  select:focus {
+    border-color: #8b0000 !important;
+    box-shadow: 0 0 0 2px rgba(139, 0, 0, 0.1) !important;
+  }
+
+  /* ========== Disabled ========== */
+  input:disabled,
+  textarea:disabled,
+  select:disabled {
+    background-color: #f3f4f6 !important;
+    color: #9ca3af !important;
+    cursor: not-allowed !important;
+    opacity: 0.6 !important;
+  }
+
+  .dark input:disabled,
+  .dark textarea:disabled,
+  .dark select:disabled {
+    background-color: #374151 !important;
+    color: #6b7280 !important;
+  }
+
+  /* ========== Placeholder ========== */
+  input::placeholder,
+  textarea::placeholder {
+    color: #9ca3af !important;
+    font-size: 13px !important;
+  }
+
+  .dark input::placeholder,
+  .dark textarea::placeholder {
+    color: #6b7280 !important;
+  }
+
+  /* ========== Error State ========== */
+  input.error,
+  textarea.error,
+  select.error {
+    border-color: #ef4444 !important;
+  }
+
+  input.error:focus,
+  textarea.error:focus,
+  select.error:focus {
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.1) !important;
+  }
+
+  /* ============================================================
+     override کردن کلاس‌های گردی Tailwind
+     ============================================================ */
+  .rounded-none {
+    border-radius: 0 !important;
+  }
+
+  .rounded-sm {
+    border-radius: 2px !important;
+  }
+
+  .rounded,
+  .rounded-md {
+    border-radius: 2px !important;
+  }
+
+  .rounded-lg {
+    border-radius: 2px !important;
+  }
+
+  .rounded-xl {
+    border-radius: 2px !important;
+  }
+
+  .rounded-2xl {
+    border-radius: 2px !important;
+  }
+
+  .rounded-3xl {
+    border-radius: 2px !important;
+  }
+
+  .rounded-full {
+    border-radius: 9999px !important;
+  }
+
+
+  /* app/globals.css */
+
+  /* ⬇ کلاس مخفی‌سازی کامل اسکرول‌بار (موبایل) */
+  .scrollbar-hide {
+    -ms-overflow-style: none !important;  /* اینترنت اکسپلورر و اج */
+    scrollbar-width: none !important;     /* فایرفاکس */
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none !important;            /* کروم، سافاری و ... */
+  }
+
+  /* ⬇ کلاس اسکرول‌بار نازک (دسکتاپ) */
+  .thin-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .thin-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .thin-scrollbar::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+  }
+}

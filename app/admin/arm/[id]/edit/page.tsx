@@ -50,7 +50,7 @@ export default function EditArmPage() {
         setSaving(true);
         try {
             await apiService.admin.arms.update(armId, data);
-            toast.success('بازار با موفقیت به‌روزرسانی شد');
+            //toast.success('بازار با موفقیت به‌روزرسانی شد');
         } catch (error: any) {
             toast.error(error?.message || 'خطا در به‌روزرسانی بازار');
         } finally {

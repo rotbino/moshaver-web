@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { UseFormSetValue, UseFormWatch, useFieldArray, Control } from 'react-hook-form';
-import { Plus, MapPin, Globe, X, Save, AlertTriangle } from 'lucide-react';
+import { Plus, MapPin, Globe, X, AlertTriangle, Lock, Eye, AlertCircle } from 'lucide-react';
 import { apiService } from '@/lib/api/apiService';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -13,9 +13,24 @@ interface LocationSelectorProps {
     watch: UseFormWatch<any>;
     setValue: UseFormSetValue<any>;
     onSave?: () => void;
+    isAdmin?: boolean;
+    isSaving?: boolean;
 }
 
-export function LocationSelector({ control, watch, setValue, onSave }: LocationSelectorProps) {
+export function LocationSelector({
+                                     control,
+                                     watch,
+                                     setValue,
+                                     onSave,
+                                     isAdmin = false,
+                                     isSaving = false
+                                 }: LocationSelectorProps) {
+    // ✅ اگر control وجود نداشت، خطا نده و یک پیام نمایش بده
+    if (!control) {
+        console.error('❌ LocationSelector: control is undefined!');
+        return <div className="text-center py-8 text-error">خطا: کنترل فرم در دسترس نیست. لطفاً صفحه را مجدداً بارگذاری کنید.</div>;
+    }
+
     const { fields, append, remove } = useFieldArray({
         control,
         name: 'config.locationSelections',
@@ -27,6 +42,14 @@ export function LocationSelector({ control, watch, setValue, onSave }: LocationS
     const [selectedProvince, setSelectedProvince] = useState<string>('');
     const [deleteConfirm, setDeleteConfirm] = useState<{ index: number; city: string } | null>(null);
 
+    // ✅ گرفتن دسترسی از armAdminPermission
+    const armAdminPermission = watch('config.armAdminPermission') || {};
+    const locationsAccess = armAdminPermission.locations || {};
+    const canEdit = isAdmin || locationsAccess.canEdit === true;
+    const canAdd = isAdmin || locationsAccess.canAdd === true;
+    const canRemove = isAdmin || locationsAccess.canRemove === true;
+    const isOwnerWithNoAccess = !isAdmin && !canAdd && !canRemove;
+
     // ============================================================
     // واکشی درخت
     // ============================================================
@@ -37,7 +60,10 @@ export function LocationSelector({ control, watch, setValue, onSave }: LocationS
                 const iran = data?.find((c: any) => c.countryCode === 'IR');
                 if (iran) setSelectedCountry(iran.id);
             })
-            .catch(() => toast.error('خطا در دریافت موقعیت‌ها'))
+            .catch((err) => {
+                console.error('❌ Error fetching locations:', err);
+                toast.error('خطا در دریافت موقعیت‌ها');
+            })
             .finally(() => setLoading(false));
     }, []);
 
@@ -56,6 +82,7 @@ export function LocationSelector({ control, watch, setValue, onSave }: LocationS
     // افزودن (با auto-save)
     // ============================================================
     const addCity = (city: any) => {
+        if (!canAdd) return;
         if (currentSelections.some((s: any) => s.locationId === city.id)) {
             toast.info('این شهر قبلاً اضافه شده');
             return;
@@ -68,10 +95,10 @@ export function LocationSelector({ control, watch, setValue, onSave }: LocationS
         });
         setTimeout(() => onSave?.(), 100);
         toast.success(`${city.title} اضافه شد`);
-
     };
 
     const addProvince = (province: any) => {
+        if (!canAdd) return;
         const provinceCities = province.children?.filter((c: any) => c.type === 'city') || [];
         let added = 0;
         provinceCities.forEach((city: any) => {
@@ -97,6 +124,7 @@ export function LocationSelector({ control, watch, setValue, onSave }: LocationS
     // حذف با تأیید
     // ============================================================
     const confirmRemove = (index: number, cityName: string) => {
+        if (!canRemove) return;
         setDeleteConfirm({ index, city: cityName });
     };
 
@@ -110,7 +138,7 @@ export function LocationSelector({ control, watch, setValue, onSave }: LocationS
     };
 
     // ============================================================
-    // تغییر customLabel (با debounce ساده)
+    // تغییر customLabel
     // ============================================================
     const handleCustomLabelChange = (index: number, value: string) => {
         setValue(`config.locationSelections.${index}.customLabel`, value);
@@ -139,12 +167,31 @@ export function LocationSelector({ control, watch, setValue, onSave }: LocationS
 
     return (
         <div className="space-y-4">
+            {/* ⭐ پیام هشدار برای مالک بدون دسترسی */}
+            {isOwnerWithNoAccess && (
+                <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+                    <p className="text-xs text-amber-800 dark:text-amber-300">
+                        ویرایش موقعیت‌ها فقط توسط مدیر سیستم قابل انجام است.
+                        در صورت نیاز به تغییر، با پشتیبانی سرنخ تماس بگیرید.
+                    </p>
+                </div>
+            )}
+
             {/* ═══════════════ موقعیت‌های انتخاب‌شده (بالا) ═══════════════ */}
             <div className="bg-surface-container-lowest rounded-xl border border-outline-variant/30 p-4">
-                <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                    موقعیت‌های انتخاب‌شده
-                    <span className="text-xs text-on-surface-variant font-normal">({fields.length})</span>
-                </h3>
+                <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-semibold flex items-center gap-2">
+                        موقعیت‌های انتخاب‌شده
+                        <span className="text-xs text-on-surface-variant font-normal">({fields.length})</span>
+                    </h3>
+                    {!canEdit && (
+                        <div className="flex items-center gap-1.5 text-xs text-on-surface-variant/60">
+                            <Lock className="w-3.5 h-3.5" />
+                            فقط مشاهده
+                        </div>
+                    )}
+                </div>
 
                 {fields.length === 0 ? (
                     <div className="text-center py-6 text-sm text-on-surface-variant">
@@ -160,19 +207,19 @@ export function LocationSelector({ control, watch, setValue, onSave }: LocationS
                                     <MapPin className="w-3.5 h-3.5 text-primary/60 flex-shrink-0" />
                                     <span className="font-medium">{city}</span>
                                     <span className="text-[10px] text-on-surface-variant/60">({province})</span>
-                                    <input
-                                        value={field.customLabel || ''}
-                                        onChange={e => handleCustomLabelChange(index, e.target.value)}
-                                        placeholder="برچسب..."
-                                        className="w-20 bg-transparent border-b border-outline-variant/30 text-xs px-1 py-0.5 focus:border-primary outline-none"
-                                    />
-                                    <button
-                                        onClick={() => confirmRemove(index, city)}
-                                        className="p-0.5 hover:bg-error/10 hover:text-error rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                                        type="button"
-                                        title="حذف">
-                                        <X className="w-3 h-3" />
-                                    </button>
+
+                                    {canRemove && (
+                                        <button
+                                            onClick={() => confirmRemove(index, city)}
+                                            className="p-0.5 hover:bg-error/10 hover:text-error rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                                            type="button"
+                                            title="حذف">
+                                            <X className="w-3 h-3" />
+                                        </button>
+                                    )}
+                                    {!canRemove && !isAdmin && (
+                                        <Eye className="w-3 h-3 text-gray-400" />
+                                    )}
                                 </div>
                             );
                         })}
@@ -222,12 +269,17 @@ export function LocationSelector({ control, watch, setValue, onSave }: LocationS
                                     <span className="text-sm">{province.title}</span>
                                     <div className="flex items-center gap-2">
                                         <span className="text-[10px] text-on-surface-variant/50">{province.children?.length || 0} شهر</span>
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); addProvince(province); }}
-                                            className="p-1 hover:bg-primary/10 hover:text-primary rounded transition-colors"
-                                            title="افزودن همه شهرهای این استان">
-                                            <Plus className="w-3.5 h-3.5" />
-                                        </button>
+                                        {canAdd && (
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); addProvince(province); }}
+                                                className="p-1 hover:bg-primary/10 hover:text-primary rounded transition-colors"
+                                                title="افزودن همه شهرهای این استان">
+                                                <Plus className="w-3.5 h-3.5" />
+                                            </button>
+                                        )}
+                                        {!canAdd && !isAdmin && (
+                                            <Lock className="w-3 h-3 text-gray-400" />
+                                        )}
                                     </div>
                                 </div>
                             ))}
@@ -258,17 +310,26 @@ export function LocationSelector({ control, watch, setValue, onSave }: LocationS
                                         return (
                                             <div key={city.id} className="flex items-center justify-between px-4 py-2.5 hover:bg-surface-container-low transition-colors">
                                                 <span className="text-sm">{city.title}</span>
-                                                <button
-                                                    onClick={() => !isAdded && addCity(city)}
-                                                    disabled={isAdded}
-                                                    className={cn(
-                                                        "p-1.5 rounded-lg transition-colors text-xs",
-                                                        isAdded
-                                                            ? "bg-green-50 text-green-600 cursor-default"
-                                                            : "hover:bg-primary/10 hover:text-primary"
+                                                {canAdd ? (
+                                                    <button
+                                                        onClick={() => !isAdded && addCity(city)}
+                                                        disabled={isAdded}
+                                                        className={cn(
+                                                            "p-1.5 rounded-lg transition-colors text-xs",
+                                                            isAdded
+                                                                ? "bg-green-50 text-green-600 cursor-default"
+                                                                : "hover:bg-primary/10 hover:text-primary"
+                                                        )}>
+                                                        {isAdded ? '✓ اضافه شده' : <Plus className="w-3.5 h-3.5" />}
+                                                    </button>
+                                                ) : (
+                                                    <span className={cn(
+                                                        "text-xs",
+                                                        isAdded ? "text-green-600" : "text-gray-400"
                                                     )}>
-                                                    {isAdded ? '✓ اضافه شده' : <Plus className="w-3.5 h-3.5" />}
-                                                </button>
+                                                        {isAdded ? '✓ اضافه شده' : '🔒'}
+                                                    </span>
+                                                )}
                                             </div>
                                         );
                                     })}
@@ -280,7 +341,7 @@ export function LocationSelector({ control, watch, setValue, onSave }: LocationS
             )}
 
             {/* ═══════════════ مودال تأیید حذف ═══════════════ */}
-            {deleteConfirm && (
+            {deleteConfirm && canRemove && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
                     <div className="bg-surface w-full max-w-sm rounded-2xl shadow-2xl border border-outline-variant">
                         <div className="flex items-center justify-between px-5 py-4 border-b">

@@ -347,30 +347,47 @@ export function GeneralSection({
 
                     <div className="mt-5 pt-5 border-t border-outline-variant/20 dark:border-gray-800">
                         <div className="flex items-center gap-3">
+                            {/* انتخابگر رنگ */}
                             <div className="relative">
                                 <input
                                     type="color"
-                                    value={currentPrimary}
-                                    onChange={(e) => applyTheme(e.target.value, e.target.value)}
+                                    value={typeof currentPrimary === 'string' ? currentPrimary : '#e65100'}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        setValue('colorPrimary', val, { shouldDirty: true });
+                                        applyTheme(val, val);
+                                    }}
                                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                                 />
                                 <div
                                     className="w-9 h-9 rounded-xl border-2 border-outline-variant/30 dark:border-gray-700 cursor-pointer shadow-sm hover:shadow-md transition-shadow"
-                                    style={{ backgroundColor: currentPrimary }}
+                                    style={{ backgroundColor: typeof currentPrimary === 'string' ? currentPrimary : '#e65100' }}
                                 />
                             </div>
+
+                            {/* ورودی کد HEX */}
                             <input
+                                //dir={"ltr"}
                                 type="text"
-                                value={currentPrimary}
+                                value={typeof currentPrimary === 'string' ? currentPrimary : '#e65100'}
                                 onChange={(e) => {
                                     const val = e.target.value;
                                     if (/^#[0-9A-Fa-f]{0,6}$/.test(val)) {
                                         setValue('colorPrimary', val, { shouldDirty: true });
-                                        if (val.length === 7) applyTheme(val, val);
+                                        if (val.length === 7) {
+                                            applyTheme(val, val);
+                                        }
                                     }
                                 }}
-                                className="w-24 bg-white dark:bg-gray-900 border border-outline-variant/30 dark:border-gray-700 rounded-xl h-9 px-3 text-xs text-center font-mono focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                                onBlur={(e) => {
+                                    const val = e.target.value;
+                                    if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
+                                        applyTheme(val, val);
+                                    }
+                                }}
+                                className="w-28 bg-white dark:bg-gray-900 border border-outline-variant/30 dark:border-gray-700 rounded-xl h-9 px-3 text-xs text-center font-mono focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
                                 placeholder="#e65100"
+                                maxLength={7}
                             />
                             <span className="text-[11px] text-on-surface-variant/40 dark:text-gray-600">کد HEX دلخواه</span>
                         </div>

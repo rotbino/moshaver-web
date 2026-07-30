@@ -122,7 +122,7 @@ export function LocationFilter() {
         <>
             <button
                 onClick={handleOpenModal}
-                className={`flex items-center gap-1.5 px-2 py-1.5 text-xs font-medium transition-all duration-200 rounded-md border ${
+                className={`flex  h-8 items-center gap-1  py-1.5 px-1 text-[11px]  transition-all duration-200 rounded-3xl  ${
                     hasActiveFilter
                         ? 'text-primary border-primary/30 bg-primary/5'
                         : 'text-on-surface-variant border-outline-variant/50 hover:bg-surface-container-low'
@@ -130,7 +130,7 @@ export function LocationFilter() {
             >
                 {getButtonIcon()}
                 <span>{getButtonLabel()}</span>
-                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showModal ? 'rotate-180' : ''}`} />
+              {/*  <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showModal ? 'rotate-180' : ''}`} />*/}
                 {hasActiveFilter && (
                     <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
                 )}

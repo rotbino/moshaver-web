@@ -48,7 +48,7 @@ export function MembershipBanner() {
             setIsDismissed(true);
         } catch (error: any) {
             if (error?.data?.errorCode === 'ALREADY_MEMBER') {
-                toast.info('شما قبلاً عضو این بازار هستید');
+               // toast.info('شما قبلاً عضو این بازار هستید');
                 setIsMember(true);
                 setIsDismissed(true);
             } else {

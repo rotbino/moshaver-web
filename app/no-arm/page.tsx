@@ -33,8 +33,7 @@ export default function NoArmPage() {
 
                     <p className="text-on-surface-variant max-w-md leading-7">
                         ورود به سرنخ در حال حاضر تنها از طریق لینک دعوت امکان‌پذیر است.
-                        <br />
-                        اگر لینک دعوت دارید، روی آن کلیک کنید و یا آنرا در نوار مرورگر کپی کنید و وارد شوید.
+
                     </p>
                 </div>
             </main>

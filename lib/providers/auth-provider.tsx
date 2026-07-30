@@ -55,7 +55,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             !pathname?.startsWith('/_next') &&
             !pathname?.startsWith('/api') &&
             !pathname?.startsWith('/admin') &&
-            !pathname?.startsWith('/arm-admin') &&  // ✅پنل مدیر بازو
+            !pathname?.startsWith('/arm-admin') &&  // ✅پنل مالک بازار
             !pathname?.startsWith('/login') &&
             !pathname?.startsWith('/register') &&
             !pathname?.startsWith('/no-arm') &&

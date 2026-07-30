@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/lib/store/store';
 import { UseFormWatch, UseFormSetValue, Control, useFieldArray } from 'react-hook-form';
-import { Trash2, Search, Loader2, X, Check, ChevronRight, AlertTriangle, Layers, Package, List } from 'lucide-react';
+import { Trash2, Search, Loader2, X, Check, ChevronRight, AlertTriangle, Layers, Package, List, Lock, Eye, AlertCircle } from 'lucide-react';
 import { apiService } from '@/lib/api/apiService';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -17,6 +17,7 @@ interface CategorySelectorProps {
     disabled?: boolean;
     onSave?: () => void;
     activeScopeId?: string | null;
+    isAdmin?: boolean;
 }
 
 interface CategoryNode {
@@ -31,6 +32,7 @@ interface CategoryNode {
 export function CategorySelector({
                                      control, watch, setValue,
                                      disabled = false, onSave, activeScopeId = null,
+                                     isAdmin = false,
                                  }: CategorySelectorProps) {
     const { fields, append, remove } = useFieldArray({ control, name: 'config.categorySelections' });
     const { currentArm } = useSelector((state: RootState) => state.arm);
@@ -41,15 +43,23 @@ export function CategorySelector({
     const [selectedCategoryUnits, setSelectedCategoryUnits] = useState<any[]>([]);
     const [isLoadingUnits, setIsLoadingUnits] = useState(false);
     const [pendingCategoryId, setPendingCategoryId] = useState<string | null>(null);
+    const [editingIndex, setEditingIndex] = useState<number | null>(null);
     const [showUnitModal, setShowUnitModal] = useState(false);
     const [deleteConfirm, setDeleteConfirm] = useState<{ index: number; title: string } | null>(null);
     const [selectedParentId, setSelectedParentId] = useState<string | null>(null);
+
+    const armAdminPermission = watch('config.armAdminPermission') || {};
+    const categoriesAccess = armAdminPermission.categories || {};
+
+    const canAdd = isAdmin || categoriesAccess.canAdd === true;
+    const canRemove = isAdmin || categoriesAccess.canRemove === true;
+    const canChangeUnit = isAdmin || categoriesAccess.canChangeUnit === true;
 
     const allowedCategoryScope = currentArm?.config?.allowedCategoryScope || [];
     const hasScope = allowedCategoryScope.length > 0;
 
     // ============================================================
-    // واکشی
+    // واکشی دسته‌بندی‌ها
     // ============================================================
     useEffect(() => {
         setIsLoading(true);
@@ -60,7 +70,7 @@ export function CategorySelector({
     }, []);
 
     // ============================================================
-    // سرگروه‌ها (level 1) - از scope فیلتر میشن
+    // سرگروه‌ها
     // ============================================================
     const parentGroups = useMemo(() => {
         let result = allCategories.filter(c => c.level === 1);
@@ -76,7 +86,21 @@ export function CategorySelector({
     }, [allCategories, hasScope, allowedCategoryScope, activeScopeId]);
 
     // ============================================================
-    // برگ‌های سرگروه انتخاب‌شده (level >= 2)
+    // انتخاب اولین سرگروه به‌صورت خودکار
+    // ============================================================
+    useEffect(() => {
+        if (parentGroups.length > 0) {
+            const isValid = selectedParentId && parentGroups.some(p => p.id === selectedParentId);
+            if (!isValid) {
+                setSelectedParentId(parentGroups[0].id);
+            }
+        } else {
+            setSelectedParentId(null);
+        }
+    }, [parentGroups]);
+
+    // ============================================================
+    // برگ‌ها
     // ============================================================
     const leavesForParent = useMemo(() => {
         if (!selectedParentId) return [];
@@ -96,7 +120,7 @@ export function CategorySelector({
     const selectedIds = fields.map((f: any) => f.categoryId);
 
     // ============================================================
-    // آمار انتخاب‌شده‌ها برای هر سرگروه
+    // آمار انتخاب‌شده‌ها
     // ============================================================
     const parentStats = useMemo(() => {
         const stats: Record<string, { total: number; selected: number }> = {};
@@ -111,51 +135,60 @@ export function CategorySelector({
     // ============================================================
     // واحدها
     // ============================================================
-    const fetchCategoryUnits = async (categoryId: string) => {
+    const fetchCategoryUnits = (categoryId: string, editingIndex?: number) => {
+        if (!canChangeUnit) return;
         setIsLoadingUnits(true);
         setPendingCategoryId(categoryId);
-        try {
-            const res = await apiService.admin.categories.getUnits(categoryId);
-            setSelectedCategoryUnits(res || []);
-            setShowUnitModal(true);
-        } catch { toast.error('خطا در دریافت واحدها'); }
-        finally { setIsLoadingUnits(false); }
+        setEditingIndex(editingIndex !== undefined ? editingIndex : null);
+        apiService.admin.categories.getUnits(categoryId)
+            .then(res => {
+                setSelectedCategoryUnits(res || []);
+                setShowUnitModal(true);
+            })
+            .catch(() => toast.error('خطا در دریافت واحدها'))
+            .finally(() => setIsLoadingUnits(false));
     };
-
-
-
-    // app/admin/arm/components/CategorySelector.tsx
-// ⬇ confirmAddCategory رو با pendingCategoryId جایگزین کن:
 
     const confirmAddCategory = (unitId: string, unitTitle: string) => {
         if (!pendingCategoryId) return;
 
-        const category = allCategories.find(c => c.id === pendingCategoryId);
-        const currentSelections = watch('config.categorySelections') || [];
-
-        append({
-            categoryId: pendingCategoryId,
-            customLabel: null,
-            overrideUnitId: unitId,
-            overrideUnitTitle: unitTitle,
-            overrideMinQuantity: null,
-            displayPriority: currentSelections.length,
-            isActive: true,
-            example: category?.example || null,
-        });
+        if (editingIndex !== null) {
+            const currentSelections = watch('config.categorySelections') || [];
+            if (currentSelections[editingIndex]) {
+                const updatedSelections = [...currentSelections];
+                updatedSelections[editingIndex] = {
+                    ...updatedSelections[editingIndex],
+                    overrideUnitId: unitId,
+                    overrideUnitTitle: unitTitle,
+                };
+                setValue('config.categorySelections', updatedSelections);
+                toast.success('واحد با موفقیت تغییر یافت');
+            }
+            setEditingIndex(null);
+        } else {
+            const category = allCategories.find(c => c.id === pendingCategoryId);
+            const currentSelections = watch('config.categorySelections') || [];
+            append({
+                categoryId: pendingCategoryId,
+                customLabel: null,
+                overrideUnitId: unitId,
+                overrideUnitTitle: unitTitle,
+                overrideMinQuantity: null,
+                displayPriority: currentSelections.length,
+                isActive: true,
+                example: category?.example || null,
+            });
+            toast.success('دسته‌بندی اضافه شد');
+        }
 
         setPendingCategoryId(null);
         setSelectedCategoryUnits([]);
         setShowUnitModal(false);
-        toast.success('دسته‌بندی اضافه شد');
-
         if (onSave) onSave();
     };
 
-    // ============================================================
-    // حذف
-    // ============================================================
     const confirmRemove = (index: number) => {
+        if (!canRemove) return;
         const field = fields[index];
         const cat = allCategories.find(c => c.id === field.categoryId);
         setDeleteConfirm({ index, title: cat?.title || 'این دسته‌بندی' });
@@ -169,13 +202,9 @@ export function CategorySelector({
         if (onSave) onSave();
     };
 
-    // ============================================================
-    // کلیک روی برگ - اگه واحد داره مستقیم اضافه کن، وگرنه مودال واحد
-    // ============================================================
     const handleLeafClick = (leafId: string) => {
+        if (!canAdd) return;
         if (selectedIds.includes(leafId)) return;
-        const units = allCategories.find(c => c.id === leafId);
-        // مستقیم واحد دیفالت رو بگیر
         fetchCategoryUnits(leafId);
     };
 
@@ -183,7 +212,17 @@ export function CategorySelector({
 
     return (
         <div className="space-y-4">
-            {/* ═══════════════ باکس‌های سه‌گانه ═══════════════ */}
+            {/* ⭐ پیام هشدار برای مالک بدون دسترسی */}
+            {!isAdmin && !canAdd && !canRemove && !canChangeUnit && (
+                <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+                    <p className="text-xs text-amber-800 dark:text-amber-300">
+                        ویرایش گروه‌های کالا فعلا توسط مدیر سیستم قابل انجام است.
+                        در صورت نیاز به تغییر یا افزودن گروه جدید، با پشتیبانی سرنخ تماس بگیرید.
+                    </p>
+                </div>
+            )}
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
                 {/* باکس ۱: سرگروه‌ها */}
@@ -225,6 +264,8 @@ export function CategorySelector({
                     </div>
                     {!selectedParentId ? (
                         <div className="text-center py-12 text-sm text-on-surface-variant">یک سرگروه انتخاب کنید</div>
+                    ) : leavesForParent.length === 0 ? (
+                        <div className="text-center py-8 text-sm text-on-surface-variant">هیچ گروهی یافت نشد</div>
                     ) : (
                         <>
                             <div className="p-2 border-b border-outline-variant/10">
@@ -236,9 +277,7 @@ export function CategorySelector({
                                 </div>
                             </div>
                             <div className="divide-y divide-outline-variant/10 max-h-[400px] overflow-y-auto">
-                                {leavesForParent.length === 0 ? (
-                                    <div className="text-center py-8 text-sm text-on-surface-variant">هیچ گروهی یافت نشد</div>
-                                ) : leavesForParent.map(leaf => {
+                                {leavesForParent.map(leaf => {
                                     const isSelected = selectedIds.includes(leaf.id);
                                     return (
                                         <div key={leaf.id}
@@ -249,7 +288,9 @@ export function CategorySelector({
                                                 <span className="text-xs text-green-600 flex items-center gap-1"><Check className="w-3.5 h-3.5" />انتخاب شده</span>
                                             ) : (
                                                 <button onClick={() => handleLeafClick(leaf.id)}
-                                                        className="text-xs text-primary hover:underline">+ افزودن</button>
+                                                        className={cn("text-xs", canAdd ? "text-primary hover:underline" : "text-gray-400 cursor-not-allowed")}>
+                                                    {canAdd ? '+ افزودن' : '🔒'}
+                                                </button>
                                             )}
                                         </div>
                                     );
@@ -263,7 +304,7 @@ export function CategorySelector({
                 <div className="bg-surface-container-low rounded-xl border border-outline-variant/30 overflow-hidden">
                     <div className="px-4 py-3 bg-surface-container-low border-b border-outline-variant/20 flex items-center gap-2">
                         <List className="w-4 h-4 text-primary" />
-                        <h4 className="text-sm font-semibold">انتخاب‌شده‌ها</h4>
+                        <h4 className="text-sm font-semibold">گروههای کالای بازار شما</h4>
                         <span className="text-xs text-on-surface-variant mr-auto">{fields.length}</span>
                     </div>
                     <div className="max-h-[500px] overflow-y-auto">
@@ -287,16 +328,26 @@ export function CategorySelector({
                                                         <span className="text-[10px] bg-surface-container-high px-1.5 py-0.5 rounded">
                                                             {field.overrideUnitTitle || 'تن'}
                                                         </span>
-                                                        <button type="button"
-                                                                onClick={() => { setPendingCategoryId(field.categoryId); fetchCategoryUnits(field.categoryId); }}
-                                                                className="text-[10px] text-primary hover:underline">تغییر واحد</button>
+                                                        {canChangeUnit && (
+                                                            <button type="button"
+                                                                    onClick={() => fetchCategoryUnits(field.categoryId, index)}
+                                                                    className="text-[10px] text-primary hover:underline">تغییر واحد</button>
+                                                        )}
+                                                        {!canChangeUnit && (
+                                                            <Eye className="w-3 h-3 text-gray-400" />
+                                                        )}
                                                     </div>
                                                 </div>
-                                                <button type="button" onClick={() => !disabled && confirmRemove(index)}
-                                                        className="p-1 hover:bg-error/10 hover:text-error rounded opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
-                                                        disabled={disabled}>
-                                                    <Trash2 className="w-3.5 h-3.5" />
-                                                </button>
+                                                {canRemove && (
+                                                    <button type="button" onClick={() => !disabled && confirmRemove(index)}
+                                                            className="p-1 hover:bg-error/10 hover:text-error rounded opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                                                            disabled={disabled}>
+                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                    </button>
+                                                )}
+                                                {!canRemove && (
+                                                    <Eye className="w-3.5 h-3.5 text-gray-400" />
+                                                )}
                                             </div>
                                         </div>
                                     );
@@ -307,7 +358,7 @@ export function CategorySelector({
                 </div>
             </div>
 
-            {/* ═══════════════ مودال انتخاب واحد ═══════════════ */}
+            {/* مودال انتخاب واحد */}
             {showUnitModal && (
                 <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 p-4">
                     <div className="bg-surface w-full max-w-md rounded-2xl shadow-2xl border border-outline-variant max-h-[80vh] overflow-y-auto">
@@ -315,7 +366,7 @@ export function CategorySelector({
                             <h3 className="text-lg font-semibold">
                                 انتخاب واحد برای {allCategories.find(c => c.id === pendingCategoryId)?.title || ''}
                             </h3>
-                            <button onClick={() => { setPendingCategoryId(null); setSelectedCategoryUnits([]); setShowUnitModal(false); }}
+                            <button onClick={() => { setPendingCategoryId(null); setEditingIndex(null); setSelectedCategoryUnits([]); setShowUnitModal(false); }}
                                     className="p-1.5 hover:bg-surface-container-high rounded-lg"><X className="w-5 h-5" /></button>
                         </div>
                         <div className="p-4">
@@ -343,7 +394,7 @@ export function CategorySelector({
                 </div>
             )}
 
-            {/* ═══════════════ مودال تأیید حذف ═══════════════ */}
+            {/* مودال تأیید حذف */}
             {deleteConfirm && (
                 <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/50 p-4">
                     <div className="bg-surface w-full max-w-sm rounded-2xl shadow-2xl border border-outline-variant">

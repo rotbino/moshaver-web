@@ -170,7 +170,7 @@ export default function ArmAdminLayout({ children }: { children: React.ReactNode
                     )}
                 >
                     <Home className="w-4 h-4 flex-shrink-0" />
-                    {!isCollapsed && <span className="text-[13px]">مشاهده بازار</span>}
+                    {!isCollapsed && <span className="text-[13px]">مشاهده سایت</span>}
                 </Link>
                 <button
                     onClick={() => {

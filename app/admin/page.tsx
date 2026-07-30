@@ -95,7 +95,7 @@ export default function AdminDashboard() {
                         <p className="text-sm text-on-surface-variant mt-1">ایجاد یک بازارتخصصی با تنظیمات کامل</p>
                     </a>
                     <a href="/admin/arm" className="bg-surface-container-low border border-outline-variant p-4 hover:bg-surface-container transition-colors">
-                        <h3 className="font-semibold text-on-surface">مدیریت بازارها</h3>
+                        <h3 className="font-semibold text-on-surface"> بازوها</h3>
                         <p className="text-sm text-on-surface-variant mt-1">لیست و ویرایش بازارهای موجود</p>
                     </a>
                     <a href="/admin/categories" className="bg-surface-container-low border border-outline-variant p-4 hover:bg-surface-container transition-colors">

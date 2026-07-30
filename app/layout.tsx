@@ -8,6 +8,7 @@ import {ArmProvider} from "@/lib/providers/ArmProvider";
 import {MembershipBanner} from "@/app/components";
 import {ThemeProvider} from "@/lib/providers/ThemeProvider";
 import {FloatingAdminButton} from "@/app/components/FloatingAdminButton";
+import {AuthSync} from "@/app/components/AuthSync";
 
 // ✅ تنظیم فونت وزیر با اعداد فارسی
 const vazirmatn = Vazirmatn({
@@ -18,8 +19,8 @@ const vazirmatn = Vazirmatn({
 });
 
 export const metadata: Metadata = {
-    title: "سرنخ | پلتفرم ساخت بازارهای تخصصی B2B",
-    description: "پلتفرم ساخت بازارهای تخصصی عمده‌فروشی",
+    title: "سرنخ | زیر ساخت بازار عمده فروشی B2B",
+    description: "سرنخ اصناف مرتبط را به هم وصل می کند.",
 };
 
 export const viewport: Viewport = {
@@ -40,9 +41,9 @@ export default function RootLayout({
             <Providers>
                 <ThemeProvider>
                     <ArmProvider>
+                        <AuthSync />
                         <MembershipBanner />
                         {children}
-                        <FloatingAdminButton />
                     </ArmProvider>
                 </ThemeProvider>
             </Providers>

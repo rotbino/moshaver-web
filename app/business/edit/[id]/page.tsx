@@ -6,28 +6,10 @@ import { useRouter, useParams } from 'next/navigation';
 import { useSelector } from 'react-redux';
 import { toast } from 'sonner';
 import {
-    Building2,
-    MapPin,
-    Phone,
-    Globe,
-    FileText,
-    Save,
-    Pencil,
-    X,
-    Check,
-    Briefcase,
-    User,
-    AlertCircle,
-    Loader2,
-    Award,
-    Tag,
-    MapPinned,
-    Shield,
-    BadgeCheck,
-    ArrowRight,
-    ChevronDown,
+    Building2, MapPin, Phone, Globe, FileText, Save, Pencil, X, Check,
+    Briefcase, User, AlertCircle, Loader2, Award, Tag, MapPinned,
+    Shield, BadgeCheck, ArrowRight, Clock, XCircle,
 } from 'lucide-react';
-import { AppFooter } from '@/app/components/AppFooter';
 import { ArmLocationSelector } from '@/app/components/ArmLocationSelector';
 import { FileUploader } from '@/components/common/FileUploader';
 import { RootState } from '@/lib/store/store';
@@ -51,39 +33,18 @@ export default function EditBusinessPage() {
     const updateBusiness = useUpdateBusiness();
     const uploadMutation = useUploadFile();
 
-    // ⭐ خواندن تنظیمات از config بازار
     const armConfig = currentArm?.config as any || {};
     const restrictMembershipByIndustry = armConfig.accessRules?.restrictMembershipByIndustry ?? false;
     const supplierIndustries: { id: string; title: string }[] = armConfig.supplierIndustries || [];
     const buyerIndustries: { id: string; title: string }[] = armConfig.buyerIndustries || [];
     const labels = armConfig.formLabels || {};
 
-
-
-
-    // ============================================================
-    // ✅ State
-    // ============================================================
     const [formData, setFormData] = useState({
-        name: '',
-        shortDescription: '',
-        type: '',
-        province: '',
-        city: '',
-        provinceCode: '',
-        provinceLabel: '',
-        cityCode: '',
-        cityLabel: '',
-        phone: '',
-        address: '',
-        website: '',
-        description: '',
-        position: '',
-        logoUrl: '',
-        activityIds: [] as string[],
-        industryId: '',
+        name: '', shortDescription: '', type: '', province: '', city: '',
+        provinceCode: '', provinceLabel: '', cityCode: '', cityLabel: '',
+        phone: '', address: '', website: '', description: '', position: '',
+        logoUrl: '', activityIds: [] as string[], industryId: '',
     });
-
     const [selectedActivities, setSelectedActivities] = useState<any[]>([]);
     const [editMode, setEditMode] = useState<EditMode>('none');
     const [isSaving, setIsSaving] = useState(false);
@@ -92,24 +53,20 @@ export default function EditBusinessPage() {
     const [showActivityModal, setShowActivityModal] = useState(false);
     const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false);
     const [savingSection, setSavingSection] = useState<EditMode | null>(null);
-    // ⭐ صنوف موجود بر اساس نوع کسب‌وکار
+
     const availableIndustries = useMemo(() => {
         if (!formData.type) return [];
         return formData.type === 'wholesaler' ? supplierIndustries : buyerIndustries;
     }, [formData.type, supplierIndustries, buyerIndustries]);
-    // ⭐ نام صنف انتخاب شده
     const industryLabel = useMemo(() => {
         if (!formData.industryId) return '';
         const found = [...supplierIndustries, ...buyerIndustries].find(i => i.id === formData.industryId);
         return found?.title || '';
     }, [formData.industryId, supplierIndustries, buyerIndustries]);
-    // ============================================================
-    // ✅ پر کردن دیتا از business
-    // ============================================================
+
     useEffect(() => {
         if (business) {
             const activityIds = business.activities?.map((a: any) => a.id) || [];
-
             setFormData({
                 name: business.name || '',
                 shortDescription: business.shortDescription || '',
@@ -127,17 +84,13 @@ export default function EditBusinessPage() {
                 position: business.position || '',
                 logoUrl: business.logoUrl || '',
                 activityIds: activityIds,
-                industryId: business.industryId || '', // ⭐ اضافه شد
+                industryId: business.industryId || '',
             });
-
             setCurrentLogoFileId(business.logoUrl || '');
             setSelectedActivities(business.activities || []);
         }
     }, [business]);
 
-    // ============================================================
-    // ✅ بررسی مالکیت
-    // ============================================================
     useEffect(() => {
         if (business && user && business.ownerUserId !== user.id) {
             toast.error('شما به این کسب‌وکار دسترسی ندارید');
@@ -145,27 +98,16 @@ export default function EditBusinessPage() {
         }
     }, [business, user, router]);
 
-    // ============================================================
-    // ✅ آپلود و ست لوگو به محض انتخاب فایل
-    // ============================================================
     const handleLogoUpload = async (file: File) => {
         setIsUploading(true);
         try {
             const result = await uploadMutation.mutateAsync({
-                file: file,
-                model: 'Business',
-                modelId: businessId,
-                fieldKey: 'logo',
+                file, model: 'Business', modelId: businessId, fieldKey: 'logo',
             });
-
             setCurrentLogoFileId(result.id);
             setFormData(prev => ({ ...prev, logoUrl: result.id }));
             toast.success('لوگو با موفقیت آپلود شد');
-
-            await updateBusiness.mutateAsync({
-                id: businessId,
-                data: { logoFileId: result.id },
-            });
+            await updateBusiness.mutateAsync({ id: businessId, data: { logoFileId: result.id } });
             refetch();
         } catch (error: any) {
             toast.error(error?.message || 'خطا در آپلود لوگو');
@@ -174,13 +116,9 @@ export default function EditBusinessPage() {
         }
     };
 
-    // ============================================================
-    // ✅ ذخیره بخش خاص
-    // ============================================================
     const handleSectionSave = async (section: EditMode) => {
         setSavingSection(section);
         setIsSaving(true);
-
         try {
             const updateData = {
                 name: formData.name.trim(),
@@ -197,14 +135,9 @@ export default function EditBusinessPage() {
                 position: formData.position,
                 logoUrl: currentLogoFileId || undefined,
                 activityIds: formData.activityIds.length > 0 ? formData.activityIds : undefined,
-                industryId: formData.industryId || undefined, // ⭐ اضافه شد
+                industryId: formData.industryId || undefined,
             };
-
-            await updateBusiness.mutateAsync({
-                id: businessId,
-                data: updateData,
-            });
-
+            await updateBusiness.mutateAsync({ id: businessId, data: updateData });
             toast.success('اطلاعات با موفقیت ذخیره شد');
             refetch();
             setEditMode('none');
@@ -216,30 +149,18 @@ export default function EditBusinessPage() {
         }
     };
 
-    // ============================================================
-    // ✅ بازنشانی تغییرات
-    // ============================================================
     const resetChanges = () => {
         if (business) {
             const activityIds = business.activities?.map((a: any) => a.id) || [];
             setFormData({
-                name: business.name || '',
-                shortDescription: business.shortDescription || '',
-                type: business.type || '',
-                province: business.province || '',
-                city: business.city || '',
-                provinceCode: business.provinceCode || '',
-                provinceLabel: business.province || '',
-                cityCode: business.cityCode || '',
-                cityLabel: business.city || '',
-                phone: business.phone || '',
-                address: business.address || '',
-                website: business.website || '',
-                description: business.description || '',
-                position: business.position || '',
-                logoUrl: business.logoUrl || '',
-                activityIds: activityIds,
-                industryId: business.industryId || '', // ⭐ اضافه شد
+                name: business.name || '', shortDescription: business.shortDescription || '',
+                type: business.type || '', province: business.province || '', city: business.city || '',
+                provinceCode: business.provinceCode || '', provinceLabel: business.province || '',
+                cityCode: business.cityCode || '', cityLabel: business.city || '',
+                phone: business.phone || '', address: business.address || '',
+                website: business.website || '', description: business.description || '',
+                position: business.position || '', logoUrl: business.logoUrl || '',
+                activityIds: activityIds, industryId: business.industryId || '',
             });
             setSelectedActivities(business.activities || []);
             setCurrentLogoFileId(business.logoUrl || '');
@@ -247,9 +168,6 @@ export default function EditBusinessPage() {
         setEditMode('none');
     };
 
-    // ============================================================
-    // ✅ اگر در حال بارگذاری است
-    // ============================================================
     if (isLoading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-background dark:bg-gray-950">
@@ -268,10 +186,7 @@ export default function EditBusinessPage() {
                     <AlertCircle className="w-14 h-14 text-error mx-auto" />
                     <h2 className="mt-4 text-xl font-semibold text-on-surface dark:text-gray-100">کسب‌وکار یافت نشد</h2>
                     <p className="mt-2 text-sm text-on-surface-variant dark:text-gray-400">کسب‌وکار مورد نظر وجود ندارد یا حذف شده است</p>
-                    <button
-                        onClick={() => router.push('/profile')}
-                        className="mt-6 px-6 py-2 bg-primary text-on-primary rounded-lg hover:bg-primary/90 transition-colors"
-                    >
+                    <button onClick={() => router.push('/profile')} className="mt-6 px-6 py-2 bg-primary text-on-primary rounded-lg hover:bg-primary/90 transition-colors">
                         بازگشت به پروفایل
                     </button>
                 </div>
@@ -279,9 +194,6 @@ export default function EditBusinessPage() {
         );
     }
 
-    // ============================================================
-    // ✅ محاسبه درصد تکمیل
-    // ============================================================
     const completionPercentage = [
         formData.name ? 15 : 0,
         formData.shortDescription ? 10 : 0,
@@ -294,31 +206,39 @@ export default function EditBusinessPage() {
     ].reduce((a, b) => a + b, 0);
 
     const isComplete = completionPercentage === 100;
-
-    // ============================================================
-    // ✅ اطلاعات تکمیلی برای نمایش
-    // ============================================================
     const businessTypeLabel = BUSINESS_TYPES.find(t => t.value === formData.type)?.label || '';
     const positionLabel = USER_POSITIONS.find(p => p.value === formData.position)?.label || '';
-    const locationLabel = formData.provinceLabel && formData.cityLabel
-        ? `${formData.provinceLabel}، ${formData.cityLabel}`
-        : '';
+    const locationLabel = formData.provinceLabel && formData.cityLabel ? `${formData.provinceLabel}، ${formData.cityLabel}` : '';
 
 
+    // محاسبه وضعیت‌ها (همان قبلی، اما isRejected اضافه شود)
+    const isPending = business.verificationStatus === 'pending';
+    const isRejected = business.verificationStatus === 'rejected';
+    const isApproved = business.verificationStatus === 'approved';
+    const currentTier = business.verificationTier;
+    const hasApprovedTier = isApproved && currentTier !== 'none';
+    const isGold = currentTier === 'gold' && isApproved;
+
+
+    // کاربر می‌تواند درخواست اولیه بدهد اگر:
+    // - پروفایل کامل باشد
+    // - درخواستی در حال بررسی نداشته باشد (pending)
+    // - یا هرگز تایید نشده (none) یا رد شده (rejected) باشد
+    const canRequestInitial = isComplete && !isPending && !hasApprovedTier && !isRejected;
+
+    // کاربر می‌تواند ارتقا دهد اگر:
+    // - یک تیک تایید شده (غیر طلایی) داشته باشد
+    // - درخواست جدیدی pending نباشد
+    const canUpgrade = hasApprovedTier && !isGold && !isPending;
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-surface via-surface to-surface-container-low/30 dark:from-gray-950 dark:via-gray-950 dark:to-gray-900/30">
-            {/* ============================================================
-                هدر
-                ============================================================ */}
+            {/* ========== هدر ========== */}
             <header className="sticky top-0 z-40 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-outline-variant/50 dark:border-gray-800">
                 <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-between h-16">
                         <div className="flex items-center gap-3">
-                            <button
-                                onClick={() => router.push('/profile')}
-                                className="p-2 hover:bg-surface-container-low dark:hover:bg-gray-800 rounded-full transition-colors"
-                            >
+                            <button onClick={() => router.push('/profile')} className="p-2 hover:bg-surface-container-low dark:hover:bg-gray-800 rounded-full transition-colors">
                                 <ArrowRight className="w-5 h-5 text-on-surface-variant dark:text-gray-400" />
                             </button>
                             <div>
@@ -328,10 +248,7 @@ export default function EditBusinessPage() {
                         </div>
                         <div className="flex items-center gap-2">
                             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-surface-container-low dark:bg-gray-800 rounded-full">
-                                <div className={cn(
-                                    "w-2 h-2 rounded-full",
-                                    isComplete ? "bg-green-500" : "bg-warning"
-                                )} />
+                                <div className={cn("w-2 h-2 rounded-full", isComplete ? "bg-green-500" : "bg-warning")} />
                                 <span className="text-xs font-medium text-on-surface-variant dark:text-gray-400">
                                     {completionPercentage}% تکمیل
                                 </span>
@@ -342,17 +259,13 @@ export default function EditBusinessPage() {
             </header>
 
             <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
-                {/* ============================================================
-                    کارت پیشرفت
-                    ============================================================ */}
+                {/* ========== کارت پیشرفت ========== */}
                 <div className="hidden sm:block bg-white dark:bg-gray-900 rounded-2xl border border-outline-variant/50 dark:border-gray-800 p-6 mb-4 shadow-sm">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-6 flex-1">
                             <div className="flex items-center gap-3">
-                                <div className={cn(
-                                    "w-12 h-12 rounded-full flex items-center justify-center text-xl",
-                                    isComplete ? "bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400" : "bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-400"
-                                )}>
+                                <div className={cn("w-12 h-12 rounded-full flex items-center justify-center text-xl",
+                                    isComplete ? "bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400" : "bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-400")}>
                                     {isComplete ? <Award className="w-6 h-6" /> : <Building2 className="w-6 h-6" />}
                                 </div>
                                 <div>
@@ -360,19 +273,13 @@ export default function EditBusinessPage() {
                                         {isComplete ? 'پروفایل کامل است! 🎉' : 'تکمیل پروفایل کسب‌وکار'}
                                     </h2>
                                     <p className="text-xs text-on-surface-variant/70 dark:text-gray-500">
-                                        {isComplete
-                                            ? 'کسب‌وکار شما آماده نمایش به خریداران و فروشندگان است'
-                                            : `${100 - completionPercentage}٪ باقی مانده تا تکمیل پروفایل`
-                                        }
+                                        {isComplete ? 'کسب‌وکار شما آماده نمایش به خریداران و فروشندگان است' : `${100 - completionPercentage}٪ باقی مانده تا تکمیل پروفایل`}
                                     </p>
                                 </div>
                             </div>
                             <div className="flex-1">
                                 <div className="w-full h-2 bg-surface-container-high dark:bg-gray-800 rounded-full overflow-hidden">
-                                    <div
-                                        className="h-full bg-primary rounded-full transition-all duration-500"
-                                        style={{ width: `${completionPercentage}%` }}
-                                    />
+                                    <div className="h-full bg-primary rounded-full transition-all duration-500" style={{ width: `${completionPercentage}%` }} />
                                 </div>
                             </div>
                         </div>
@@ -383,10 +290,76 @@ export default function EditBusinessPage() {
                     </div>
                 </div>
 
-                {/* ============================================================
-                    کارت تیک اعتماد - فقط وقتی ۱۰۰٪ کامل باشد
-                    ============================================================ */}
-                {isComplete && (
+
+
+                 {/*========== کارت‌های تیک اعتماد (کامل) ==========*/}
+                {isPending && (
+                    <div className="bg-yellow-50 border-2 border-yellow-300 rounded-2xl p-6 mb-4">
+                        <div className="flex items-center gap-4">
+                            <Clock className="w-8 h-8 text-yellow-500" />
+                            <div>
+                                <h3 className="font-semibold text-on-surface dark:text-gray-100">در انتظار تأیید مدارک</h3>
+                                <p className="text-sm text-on-surface-variant dark:text-gray-400">
+                                    مدارک شما با موفقیت دریافت شد. کارشناسان ما در حال بررسی هستند.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {isRejected && (
+                    <div className="bg-red-50 border-2 border-red-300 rounded-2xl p-6 mb-4">
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                            <div className="flex items-center gap-4">
+                                <XCircle className="w-8 h-8 text-red-500" />
+                                <div>
+                                    <h3 className="font-semibold text-on-surface dark:text-gray-100">درخواست شما رد شد</h3>
+                                    <p className="text-sm text-on-surface-variant dark:text-gray-400">
+                                        {business.latestVerification?.notes
+                                            ? `دلیل: ${business.latestVerification.notes}`
+                                            : 'می‌توانید مدارک خود را اصلاح کرده و دوباره ارسال کنید.'}
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setIsVerificationModalOpen(true)}
+                                className="flex items-center gap-2 px-6 py-2.5 bg-primary text-on-primary rounded-xl hover:bg-primary/90 transition-all text-sm font-medium whitespace-nowrap"
+                            >
+                                <BadgeCheck className="w-4 h-4" />
+                                ارسال مجدد
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {hasApprovedTier && (
+                    <div className="bg-primary/5 border-2 border-primary/30 rounded-2xl p-6 mb-4">
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                            <div className="flex items-center gap-4">
+                                <BadgeCheck className="w-8 h-8 text-primary" />
+                                <div>
+                                    <h3 className="font-semibold text-on-surface dark:text-gray-100">
+                                        شما دارای تیک {currentTier === 'blue' ? 'آبی' : currentTier === 'silver' ? 'نقره‌ای' : 'طلایی'} هستید
+                                    </h3>
+                                    <p className="text-sm text-on-surface-variant dark:text-gray-400">
+                                        {isGold ? 'بالاترین سطح اعتماد را کسب کرده‌اید.' : 'می‌توانید برای ارتقاء به سطح بالاتر اقدام کنید.'}
+                                    </p>
+                                </div>
+                            </div>
+                            {!isGold && (
+                                <button
+                                    onClick={() => setIsVerificationModalOpen(true)}
+                                    className="flex items-center gap-2 px-6 py-2.5 bg-primary text-on-primary rounded-xl hover:bg-primary/90 transition-all text-sm font-medium whitespace-nowrap"
+                                >
+                                    <BadgeCheck className="w-4 h-4" />
+                                    ارتقاء تیک
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {canRequestInitial && (
                     <div className="bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 dark:from-primary/10 dark:via-primary/15 dark:to-primary/10 border-2 border-primary/30 dark:border-primary/40 rounded-2xl p-6 mb-4 shadow-sm">
                         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                             <div className="flex items-center gap-4">
@@ -395,8 +368,7 @@ export default function EditBusinessPage() {
                                 </div>
                                 <div>
                                     <h3 className="text-base font-semibold text-on-surface dark:text-gray-100 flex items-center gap-2">
-                                        اطلاعات کسب‌وکار شما کامل است!
-                                        <span className="text-lg">✅</span>
+                                        اطلاعات کسب‌وکار شما کامل است! ✅
                                     </h3>
                                     <p className="text-sm text-on-surface-variant dark:text-gray-400">
                                         اکنون می‌توانید برای دریافت تیک اعتماد اقدام کنید.
@@ -414,38 +386,25 @@ export default function EditBusinessPage() {
                     </div>
                 )}
 
-                {/* ============================================================
-                    کارت اصلی پروفایل
-                    ============================================================ */}
+                {/* ========== کارت اصلی پروفایل ========== */}
                 <div className="bg-white dark:bg-gray-900 rounded-2xl border border-outline-variant/50 dark:border-gray-800 p-6 sm:p-8 shadow-sm mb-4">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
-                        {/* لوگو */}
                         <div className="relative mx-auto sm:mx-0">
                             <FileUploader
                                 value={currentLogoFileId}
-                                onFileSelect={(file) => {
-                                    if (file) handleLogoUpload(file);
-                                }}
-                                onRemove={() => {
-                                    setCurrentLogoFileId('');
-                                    setFormData(prev => ({ ...prev, logoUrl: '' }));
-                                }}
-                                rounded={true}
-                                width={120}
-                                height={120}
-                                disabled={isSaving}
+                                onFileSelect={(file) => { if (file) handleLogoUpload(file); }}
+                                onRemove={() => { setCurrentLogoFileId(''); setFormData(prev => ({ ...prev, logoUrl: '' })); }}
+                                rounded={true} width={120} height={120} disabled={isSaving}
                             />
                             {isUploading && (
                                 <div className="absolute -bottom-6 left-0 right-0 text-center">
                                     <span className="text-[8px] text-primary bg-primary/10 dark:bg-primary/20 px-2 py-0.5 rounded-full flex items-center gap-1 justify-center">
-                                        <Loader2 className="w-3 h-3 animate-spin" />
-                                        در حال آپلود...
+                                        <Loader2 className="w-3 h-3 animate-spin" /> در حال آپلود...
                                     </span>
                                 </div>
                             )}
                         </div>
 
-                        {/* اطلاعات اصلی */}
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                                 <h1 className="text-xl sm:text-2xl font-bold text-on-surface dark:text-gray-100 truncate">
@@ -457,114 +416,61 @@ export default function EditBusinessPage() {
                                     </span>
                                 )}
                             </div>
-                            <div className="text-on-surface dark:text-gray-300 truncate mt-0.5">
-                                {formData.shortDescription || 'معرفی کوتاه'}
-                            </div>
+                            <div className="text-on-surface dark:text-gray-300 truncate mt-0.5">{formData.shortDescription || 'معرفی کوتاه'}</div>
                             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-sm text-on-surface-variant dark:text-gray-400">
-                                {locationLabel && (
-                                    <span className="flex items-center gap-1">
-                                        <MapPin className="w-3.5 h-3.5" />
-                                        {locationLabel}
-                                    </span>
-                                )}
-                                {formData.phone && (
-                                    <span className="flex items-center gap-1">
-                                        <Phone className="w-3.5 h-3.5" />
-                                        {formData.phone}
-                                    </span>
-                                )}
-                                {positionLabel && (
-                                    <span className="flex items-center gap-1 text-xs bg-surface-container-low dark:bg-gray-800 px-2 py-0.5 rounded-full">
-                                        <User className="w-3 h-3" />
-                                        {positionLabel}
-                                    </span>
-                                )}
-                                {/* ⭐ نمایش صنف */}
-                                {industryLabel && (
-                                    <span className="flex items-center gap-1 text-xs bg-primary/5 dark:bg-primary/10 text-primary dark:text-primary-400 px-2 py-0.5 rounded-full border border-primary/10 dark:border-primary/20">
-                                        <Building2 className="w-3 h-3" />
-                                        {industryLabel}
-                                    </span>
-                                )}
+                                {locationLabel && <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" />{locationLabel}</span>}
+                                {formData.phone && <span className="flex items-center gap-1"><Phone className="w-3.5 h-3.5" />{formData.phone}</span>}
+                                {positionLabel && <span className="flex items-center gap-1 text-xs bg-surface-container-low dark:bg-gray-800 px-2 py-0.5 rounded-full"><User className="w-3 h-3" />{positionLabel}</span>}
+                                {industryLabel && <span className="flex items-center gap-1 text-xs bg-primary/5 dark:bg-primary/10 text-primary dark:text-primary-400 px-2 py-0.5 rounded-full border border-primary/10 dark:border-primary/20"><Building2 className="w-3 h-3" />{industryLabel}</span>}
                             </div>
-                            {/* فعالیت‌ها */}
                             {selectedActivities.length > 0 && (
                                 <div className="flex flex-wrap gap-1.5 mt-3">
                                     {selectedActivities.map((activity: any) => (
-                                        <span
-                                            key={activity.id}
-                                            className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-primary/5 dark:bg-primary/10 text-primary dark:text-primary-400 text-[10px] rounded-full border border-primary/10 dark:border-primary/20"
-                                        >
-                                            <Tag className="w-2.5 h-2.5" />
-                                            {activity.title}
+                                        <span key={activity.id} className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-primary/5 dark:bg-primary/10 text-primary dark:text-primary-400 text-[10px] rounded-full border border-primary/10 dark:border-primary/20">
+                                            <Tag className="w-2.5 h-2.5" />{activity.title}
                                         </span>
                                     ))}
                                 </div>
                             )}
                         </div>
 
-                        {/* دکمه‌های اکشن */}
                         <div className="flex items-center gap-2 w-full sm:w-auto">
                             {editMode === 'none' ? (
-                                <button
-                                    onClick={() => setEditMode('basic')}
-                                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-primary text-on-primary rounded-xl hover:bg-primary/90 transition-all text-sm font-medium"
-                                >
-                                    <Pencil className="w-4 h-4" />
-                                    ویرایش اطلاعات
+                                <button onClick={() => setEditMode('basic')}
+                                        className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-primary text-on-primary rounded-xl hover:bg-primary/90 transition-all text-sm font-medium">
+                                    <Pencil className="w-4 h-4" /> ویرایش اطلاعات
                                 </button>
                             ) : (
                                 <div className="flex items-center gap-2 w-full sm:w-auto">
-                                    <button
-                                        onClick={resetChanges}
-                                        className="flex-1 sm:flex-none px-4 py-2.5 border border-outline dark:border-gray-700 text-on-surface dark:text-gray-300 rounded-xl hover:bg-surface-container-low dark:hover:bg-gray-800 transition-colors text-sm font-medium"
-                                    >
-                                        انصراف
-                                    </button>
-                                    <button
-                                        onClick={() => handleSectionSave(editMode)}
-                                        disabled={isSaving}
-                                        className="flex-1 sm:flex-none px-4 py-2.5 bg-primary text-on-primary rounded-xl hover:bg-primary/90 transition-all disabled:opacity-50 text-sm font-medium flex items-center justify-center gap-2"
-                                    >
-                                        {isSaving ? (
-                                            <Loader2 className="w-4 h-4 animate-spin" />
-                                        ) : (
-                                            <Check className="w-4 h-4" />
-                                        )}
-                                        ذخیره
+                                    <button onClick={resetChanges}
+                                            className="flex-1 sm:flex-none px-4 py-2.5 border border-outline dark:border-gray-700 text-on-surface dark:text-gray-300 rounded-xl hover:bg-surface-container-low dark:hover:bg-gray-800 transition-colors text-sm font-medium">انصراف</button>
+                                    <button onClick={() => handleSectionSave(editMode)} disabled={isSaving}
+                                            className="flex-1 sm:flex-none px-4 py-2.5 bg-primary text-on-primary rounded-xl hover:bg-primary/90 transition-all disabled:opacity-50 text-sm font-medium flex items-center justify-center gap-2">
+                                        {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} ذخیره
                                     </button>
                                 </div>
                             )}
                         </div>
                     </div>
 
-                    {/* توضیحات */}
                     {formData.description && editMode === 'none' && (
                         <div className="mt-4 pt-4 border-t border-outline-variant/50 dark:border-gray-800">
-                            <p className="text-sm text-on-surface-variant dark:text-gray-400 leading-relaxed">
-                                {formData.description}
-                            </p>
+                            <p className="text-sm text-on-surface-variant dark:text-gray-400 leading-relaxed">{formData.description}</p>
                         </div>
                     )}
                 </div>
 
-                {/* ============================================================
-                    گرید اطلاعات
-                    ============================================================ */}
+                {/* ========== گرید اطلاعات ========== */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
                     {/* اطلاعات اصلی */}
                     <div className="bg-white dark:bg-gray-900 rounded-2xl border border-outline-variant/50 dark:border-gray-800 p-5 shadow-sm">
                         <div className="flex items-center justify-between mb-4">
                             <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 rounded-lg bg-primary/10 dark:bg-primary/20 flex items-center justify-center">
-                                    <Building2 className="w-4 h-4 text-primary dark:text-primary-400" />
-                                </div>
+                                <div className="w-8 h-8 rounded-lg bg-primary/10 dark:bg-primary/20 flex items-center justify-center"><Building2 className="w-4 h-4 text-primary dark:text-primary-400" /></div>
                                 <h3 className="text-sm font-semibold text-on-surface dark:text-gray-100">اطلاعات اصلی</h3>
                             </div>
                             {editMode !== 'basic' ? (
-                                <button onClick={() => setEditMode('basic')} className="text-xs text-primary hover:text-primary/80 transition-colors flex items-center gap-1">
-                                    <Pencil className="w-3.5 h-3.5" />ویرایش
-                                </button>
+                                <button onClick={() => setEditMode('basic')} className="text-xs text-primary hover:text-primary/80 transition-colors flex items-center gap-1"><Pencil className="w-3.5 h-3.5" />ویرایش</button>
                             ) : (
                                 <div className="flex items-center gap-2">
                                     <button onClick={() => setEditMode('none')} className="text-xs text-on-surface-variant dark:text-gray-400 hover:text-error transition-colors">انصراف</button>
@@ -607,7 +513,6 @@ export default function EditBusinessPage() {
                                         {USER_POSITIONS.map((pos) => <option key={pos.value} value={pos.value}>{pos.label}</option>)}
                                     </select>
                                 </div>
-                                {/* ⭐ انتخاب صنف - فقط وقتی restrictMembershipByIndustry فعاله */}
                                 {restrictMembershipByIndustry && (
                                     <div>
                                         <label className="text-xs font-medium text-on-surface-variant dark:text-gray-400 block mb-1">صنف</label>
@@ -625,28 +530,11 @@ export default function EditBusinessPage() {
                             </div>
                         ) : (
                             <div className="space-y-2 text-sm">
-                                <div className="flex justify-between py-1.5 border-b border-outline-variant/30 dark:border-gray-800">
-                                    <span className="text-on-surface-variant dark:text-gray-400">نام</span>
-                                    <span className="text-on-surface dark:text-gray-200 font-medium">{formData.name || '—'}</span>
-                                </div>
-                                <div className="flex justify-between py-1.5 border-b border-outline-variant/30 dark:border-gray-800">
-                                    <span className="text-on-surface-variant dark:text-gray-400">معرفی کوتاه</span>
-                                    <span className="text-on-surface dark:text-gray-200 font-medium">{formData.shortDescription || '—'}</span>
-                                </div>
-                                <div className="flex justify-between py-1.5 border-b border-outline-variant/30 dark:border-gray-800">
-                                    <span className="text-on-surface-variant dark:text-gray-400">نوع</span>
-                                    <span className="text-on-surface dark:text-gray-200">{businessTypeLabel || '—'}</span>
-                                </div>
-                                <div className="flex justify-between py-1.5 border-b border-outline-variant/30 dark:border-gray-800">
-                                    <span className="text-on-surface-variant dark:text-gray-400">سمت</span>
-                                    <span className="text-on-surface dark:text-gray-200">{positionLabel || '—'}</span>
-                                </div>
-                                {restrictMembershipByIndustry && (
-                                    <div className="flex justify-between py-1.5">
-                                        <span className="text-on-surface-variant dark:text-gray-400">صنف</span>
-                                        <span className="text-on-surface dark:text-gray-200">{industryLabel || '—'}</span>
-                                    </div>
-                                )}
+                                <div className="flex justify-between py-1.5 border-b border-outline-variant/30 dark:border-gray-800"><span className="text-on-surface-variant dark:text-gray-400">نام</span><span className="text-on-surface dark:text-gray-200 font-medium">{formData.name || '—'}</span></div>
+                                <div className="flex justify-between py-1.5 border-b border-outline-variant/30 dark:border-gray-800"><span className="text-on-surface-variant dark:text-gray-400">معرفی کوتاه</span><span className="text-on-surface dark:text-gray-200 font-medium">{formData.shortDescription || '—'}</span></div>
+                                <div className="flex justify-between py-1.5 border-b border-outline-variant/30 dark:border-gray-800"><span className="text-on-surface-variant dark:text-gray-400">نوع</span><span className="text-on-surface dark:text-gray-200">{businessTypeLabel || '—'}</span></div>
+                                <div className="flex justify-between py-1.5 border-b border-outline-variant/30 dark:border-gray-800"><span className="text-on-surface-variant dark:text-gray-400">سمت</span><span className="text-on-surface dark:text-gray-200">{positionLabel || '—'}</span></div>
+                                {restrictMembershipByIndustry && <div className="flex justify-between py-1.5"><span className="text-on-surface-variant dark:text-gray-400">صنف</span><span className="text-on-surface dark:text-gray-200">{industryLabel || '—'}</span></div>}
                             </div>
                         )}
                     </div>
@@ -655,18 +543,12 @@ export default function EditBusinessPage() {
                     <div className="bg-white dark:bg-gray-900 rounded-2xl border border-outline-variant/50 dark:border-gray-800 p-5 shadow-sm">
                         <div className="flex items-center justify-between mb-4">
                             <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 rounded-lg bg-primary/10 dark:bg-primary/20 flex items-center justify-center">
-                                    <Briefcase className="w-4 h-4 text-primary dark:text-primary-400" />
-                                </div>
+                                <div className="w-8 h-8 rounded-lg bg-primary/10 dark:bg-primary/20 flex items-center justify-center"><Briefcase className="w-4 h-4 text-primary dark:text-primary-400" /></div>
                                 <h3 className="text-sm font-semibold text-on-surface dark:text-gray-100">فعالیتها و مجوزها</h3>
-                                {selectedActivities.length > 0 && (
-                                    <span className="text-[10px] bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-400 px-2 py-0.5 rounded-full">{selectedActivities.length}</span>
-                                )}
+                                {selectedActivities.length > 0 && <span className="text-[10px] bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-400 px-2 py-0.5 rounded-full">{selectedActivities.length}</span>}
                             </div>
                             {editMode !== 'activities' ? (
-                                <button onClick={() => setEditMode('activities')} className="text-xs text-primary hover:text-primary/80 transition-colors flex items-center gap-1">
-                                    <Pencil className="w-3.5 h-3.5" />ویرایش
-                                </button>
+                                <button onClick={() => setEditMode('activities')} className="text-xs text-primary hover:text-primary/80 transition-colors flex items-center gap-1"><Pencil className="w-3.5 h-3.5" />ویرایش</button>
                             ) : (
                                 <div className="flex items-center gap-2">
                                     <button onClick={() => setEditMode('none')} className="text-xs text-on-surface-variant dark:text-gray-400 hover:text-error transition-colors">انصراف</button>
@@ -709,10 +591,7 @@ export default function EditBusinessPage() {
                                         ))}
                                     </div>
                                 ) : (
-                                    <div>
-                                        <span className="text-sm text-on-surface-variant/50 dark:text-gray-500">انتخاب فعالیتها بسیار مهم است. انتخاب دقیق فعالیت یا فعالیتها، سبب می شود که سیستم بصورت هوشمند به تامین کنندگان و خریداران هدف وصل کند. بیشتر و دقیق دیده می شوید</span>
-                                    </div>
-
+                                    <span className="text-sm text-on-surface-variant/50 dark:text-gray-500">انتخاب فعالیتها بسیار مهم است.  با انتخاب دقیق فعالیت، شما خریدارن و تامین کنندگان دقیق خود را پیدا می کنید.</span>
                                 )}
                             </div>
                         )}
@@ -722,15 +601,11 @@ export default function EditBusinessPage() {
                     <div className="bg-white dark:bg-gray-900 rounded-2xl border border-outline-variant/50 dark:border-gray-800 p-5 shadow-sm">
                         <div className="flex items-center justify-between mb-4">
                             <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 rounded-lg bg-primary/10 dark:bg-primary/20 flex items-center justify-center">
-                                    <MapPinned className="w-4 h-4 text-primary dark:text-primary-400" />
-                                </div>
+                                <div className="w-8 h-8 rounded-lg bg-primary/10 dark:bg-primary/20 flex items-center justify-center"><MapPinned className="w-4 h-4 text-primary dark:text-primary-400" /></div>
                                 <h3 className="text-sm font-semibold text-on-surface dark:text-gray-100">موقعیت مکانی</h3>
                             </div>
                             {editMode !== 'location' ? (
-                                <button onClick={() => setEditMode('location')} className="text-xs text-primary hover:text-primary/80 transition-colors flex items-center gap-1">
-                                    <Pencil className="w-3.5 h-3.5" />ویرایش
-                                </button>
+                                <button onClick={() => setEditMode('location')} className="text-xs text-primary hover:text-primary/80 transition-colors flex items-center gap-1"><Pencil className="w-3.5 h-3.5" />ویرایش</button>
                             ) : (
                                 <div className="flex items-center gap-2">
                                     <button onClick={() => setEditMode('none')} className="text-xs text-on-surface-variant dark:text-gray-400 hover:text-error transition-colors">انصراف</button>
@@ -741,7 +616,6 @@ export default function EditBusinessPage() {
                                 </div>
                             )}
                         </div>
-
                         {editMode === 'location' ? (
                             <ArmLocationSelector
                                 provinceCode={formData.provinceCode}
@@ -752,10 +626,7 @@ export default function EditBusinessPage() {
                         ) : (
                             <div className="text-sm">
                                 {locationLabel ? (
-                                    <div className="flex items-center gap-2 text-on-surface dark:text-gray-200">
-                                        <MapPin className="w-4 h-4 text-primary" />
-                                        <span className="font-medium">{locationLabel}</span>
-                                    </div>
+                                    <div className="flex items-center gap-2 text-on-surface dark:text-gray-200"><MapPin className="w-4 h-4 text-primary" /><span className="font-medium">{locationLabel}</span></div>
                                 ) : (
                                     <span className="text-on-surface-variant/50 dark:text-gray-500">موقعیت مکانی ثبت نشده است</span>
                                 )}
@@ -768,15 +639,11 @@ export default function EditBusinessPage() {
                     <div className="bg-white dark:bg-gray-900 rounded-2xl border border-outline-variant/50 dark:border-gray-800 p-5 shadow-sm">
                         <div className="flex items-center justify-between mb-4">
                             <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 rounded-lg bg-primary/10 dark:bg-primary/20 flex items-center justify-center">
-                                    <Phone className="w-4 h-4 text-primary dark:text-primary-400" />
-                                </div>
+                                <div className="w-8 h-8 rounded-lg bg-primary/10 dark:bg-primary/20 flex items-center justify-center"><Phone className="w-4 h-4 text-primary dark:text-primary-400" /></div>
                                 <h3 className="text-sm font-semibold text-on-surface dark:text-gray-100">اطلاعات تماس</h3>
                             </div>
                             {editMode !== 'contact' ? (
-                                <button onClick={() => setEditMode('contact')} className="text-xs text-primary hover:text-primary/80 transition-colors flex items-center gap-1">
-                                    <Pencil className="w-3.5 h-3.5" />ویرایش
-                                </button>
+                                <button onClick={() => setEditMode('contact')} className="text-xs text-primary hover:text-primary/80 transition-colors flex items-center gap-1"><Pencil className="w-3.5 h-3.5" />ویرایش</button>
                             ) : (
                                 <div className="flex items-center gap-2">
                                     <button onClick={() => setEditMode('none')} className="text-xs text-on-surface-variant dark:text-gray-400 hover:text-error transition-colors">انصراف</button>
@@ -787,7 +654,6 @@ export default function EditBusinessPage() {
                                 </div>
                             )}
                         </div>
-
                         {editMode === 'contact' ? (
                             <div className="space-y-3">
                                 <div>
@@ -807,34 +673,22 @@ export default function EditBusinessPage() {
                             </div>
                         ) : (
                             <div className="space-y-2 text-sm">
-                                <div className="flex items-center gap-2 py-1">
-                                    <Phone className="w-4 h-4 text-on-surface-variant/50 dark:text-gray-500" />
-                                    <span className="text-on-surface dark:text-gray-200">{formData.phone || '—'}</span>
-                                </div>
-                                <div className="flex items-center gap-2 py-1">
-                                    <Globe className="w-4 h-4 text-on-surface-variant/50 dark:text-gray-500" />
-                                    <span className="text-on-surface dark:text-gray-200">{formData.website || '—'}</span>
-                                </div>
+                                <div className="flex items-center gap-2 py-1"><Phone className="w-4 h-4 text-on-surface-variant/50 dark:text-gray-500" /><span className="text-on-surface dark:text-gray-200">{formData.phone || '—'}</span></div>
+                                <div className="flex items-center gap-2 py-1"><Globe className="w-4 h-4 text-on-surface-variant/50 dark:text-gray-500" /><span className="text-on-surface dark:text-gray-200">{formData.website || '—'}</span></div>
                             </div>
                         )}
                     </div>
                 </div>
 
-                {/* ============================================================
-                    کارت: توضیحات
-                    ============================================================ */}
+                {/* ========== کارت: توضیحات ========== */}
                 <div className="mt-4 sm:mt-6 bg-white dark:bg-gray-900 rounded-2xl border border-outline-variant/50 dark:border-gray-800 p-5 shadow-sm">
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-lg bg-primary/10 dark:bg-primary/20 flex items-center justify-center">
-                                <FileText className="w-4 h-4 text-primary dark:text-primary-400" />
-                            </div>
+                            <div className="w-8 h-8 rounded-lg bg-primary/10 dark:bg-primary/20 flex items-center justify-center"><FileText className="w-4 h-4 text-primary dark:text-primary-400" /></div>
                             <h3 className="text-sm font-semibold text-on-surface dark:text-gray-100">توضیحات</h3>
                         </div>
                         {editMode !== 'description' ? (
-                            <button onClick={() => setEditMode('description')} className="text-xs text-primary hover:text-primary/80 transition-colors flex items-center gap-1">
-                                <Pencil className="w-3.5 h-3.5" />ویرایش
-                            </button>
+                            <button onClick={() => setEditMode('description')} className="text-xs text-primary hover:text-primary/80 transition-colors flex items-center gap-1"><Pencil className="w-3.5 h-3.5" />ویرایش</button>
                         ) : (
                             <div className="flex items-center gap-2">
                                 <button onClick={() => setEditMode('none')} className="text-xs text-on-surface-variant dark:text-gray-400 hover:text-error transition-colors">انصراف</button>
@@ -851,15 +705,11 @@ export default function EditBusinessPage() {
                                   className="w-full bg-surface-container-lowest dark:bg-gray-800 border border-outline dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-right focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all resize-none"
                                   placeholder="توضیحات کامل درباره کسب‌وکار، محصولات و خدمات..." />
                     ) : (
-                        <p className="text-sm text-on-surface-variant dark:text-gray-400 leading-relaxed">
-                            {formData.description || 'توضیحاتی ثبت نشده است'}
-                        </p>
+                        <p className="text-sm text-on-surface-variant dark:text-gray-400 leading-relaxed">{formData.description || 'توضیحاتی ثبت نشده است'}</p>
                     )}
                 </div>
 
-                {/* ============================================================
-                    دکمه ذخیره - نسخه موبایل
-                    ============================================================ */}
+                {/* ========== دکمه ذخیره - نسخه موبایل ========== */}
                 {editMode !== 'none' && (
                     <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-t border-outline-variant/50 dark:border-gray-800 p-4 z-40">
                         <div className="flex gap-3">
@@ -873,9 +723,6 @@ export default function EditBusinessPage() {
                 )}
             </main>
 
-            {/* ============================================================
-                مودال انتخاب فعالیت
-                ============================================================ */}
             <ActivitySelectorModal
                 isOpen={showActivityModal}
                 onClose={() => setShowActivityModal(false)}
@@ -896,9 +743,6 @@ export default function EditBusinessPage() {
                 title="انتخاب فعالیت‌های کسب‌وکار"
             />
 
-            {/* ============================================================
-                مودال تیک اعتماد
-                ============================================================ */}
             <VerificationModal
                 isOpen={isVerificationModalOpen}
                 onClose={() => setIsVerificationModalOpen(false)}

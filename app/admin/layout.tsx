@@ -64,6 +64,7 @@ const menuGroups: MenuGroup[] = [
         items: [
             { href: '/admin', label: 'داشبورد', icon: BarChart3, },
             { href: '/admin/users', label: 'کاربران', icon: Users },
+            { href: '/admin/businesses', label: 'کسب‌وکارها', icon: Building2 },
             { href: '/admin/arm', label: 'بازارها', icon: Globe,  },
             { href: '/admin/ads', label: 'آگهی‌ها', icon: Package },
             { href: '/admin/credits', label: 'اعتبارات', icon: CreditCard },
@@ -392,8 +393,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         isCollapsed ? 'lg:mr-[72px]' : 'lg:mr-64'
                     )}
                 >
-                    {/* ⭐ هدر - از pageMeta استفاده می‌کنه */}
-                    <header className="hidden lg:flex items-center justify-between h-16 px-6 bg-white dark:bg-gray-900 border-b border-outline-variant/20 dark:border-gray-800 sticky top-0 z-30 flex-shrink-0">
+                    {/* ⭐ هدر دسکتاپ - fixed */}
+                    <header className="hidden lg:flex items-center justify-between h-16 px-6 bg-white dark:bg-gray-900 border-b border-outline-variant/20 dark:border-gray-800 fixed top-0 left-0 right-0 z-30">
                         <div className="flex items-center gap-3 min-w-0">
                             {showBackButton && (
                                 <button
@@ -432,8 +433,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         </div>
                     </header>
 
-                    {/* هدر موبایل */}
-                    <div className="lg:hidden sticky top-0 z-30 bg-white dark:bg-gray-900 border-b border-outline-variant/20 dark:border-gray-800 px-4 h-14 flex items-center justify-between flex-shrink-0">
+                    {/* ⭐ هدر موبایل - fixed */}
+                    <div className="lg:hidden fixed top-0 left-0 right-0 z-30 bg-white dark:bg-gray-900 border-b border-outline-variant/20 dark:border-gray-800 px-4 h-14 flex items-center justify-between">
                         <div className="flex items-center gap-3 min-w-0">
                             {showBackButton ? (
                                 <button
@@ -452,8 +453,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                 </div>
                             )}
                             <span className="font-bold text-sm text-on-surface dark:text-gray-100 truncate">
-                                {headerTitle}
-                            </span>
+                            {headerTitle}
+                        </span>
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
                             <ThemeToggle />
@@ -466,8 +467,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         </div>
                     </div>
 
+                    {/* ⭐ اسپیسر برای جبران ارتفاع هدر */}
+                    <div className="h-16 lg:h-16 flex-shrink-0 hidden lg:block" />
+                    <div className="h-14 lg:hidden flex-shrink-0" />
+
                     <main className="flex-1 overflow-y-auto">
-                        <div className="p-4 lg:p-6 ">
+                        <div className="p-4 lg:p-6">
                             {children}
                         </div>
                     </main>

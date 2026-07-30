@@ -3,9 +3,10 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { UseFormSetValue, UseFormWatch } from 'react-hook-form';
-import { Search, X, Check, ChevronRight, Plus, Building2, AlertCircle, AlertTriangle } from 'lucide-react';
+import { Search, X, Check, ChevronRight, Plus, Building2, AlertCircle, AlertTriangle, Lock, Eye } from 'lucide-react';
 import { apiService } from '@/lib/api/apiService';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 interface CategoryScopeSelectorProps {
     watch: UseFormWatch<any>;
@@ -15,6 +16,10 @@ interface CategoryScopeSelectorProps {
     onSave?: () => void;
     onScopeSelect?: (scopeId: string | null) => void;
     activeScopeId?: string | null;
+    isAdmin?: boolean;
+    // ✅ دسترسی‌های جدید
+    canAddScope?: boolean;
+    canRemoveScope?: boolean;
 }
 
 interface CategoryNode {
@@ -29,6 +34,9 @@ interface CategoryNode {
 export function CategoryScopeSelector({
                                           watch, setValue, disabled = false, categorySelections = [],
                                           onSave, onScopeSelect, activeScopeId = null,
+                                          isAdmin = false,
+                                          canAddScope = false,
+                                          canRemoveScope = false,
                                       }: CategoryScopeSelectorProps) {
     const [allCategories, setAllCategories] = useState<CategoryNode[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
@@ -36,6 +44,17 @@ export function CategoryScopeSelector({
     const [showAddModal, setShowAddModal] = useState(false);
     const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
     const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; title: string; childCount: number } | null>(null);
+
+    // ✅ گرفتن دسترسی از armAdminPermission
+    const armAdminPermission = watch('config.armAdminPermission') || {};
+    const categoriesAccess = armAdminPermission.categories || {};
+
+    // ✅ ترکیب دسترسی‌ها
+    const _canAddScope = isAdmin || canAddScope || categoriesAccess.canAddScope === true;
+    const _canRemoveScope = isAdmin || canRemoveScope || categoriesAccess.canRemoveScope === true;
+    const _canView = isAdmin || categoriesAccess.canView !== false;
+
+    const isOwnerWithNoAccess = !isAdmin && !_canAddScope && !_canRemoveScope;
 
     const selectedIds: string[] = watch('config.allowedCategoryScope') || [];
 
@@ -85,6 +104,7 @@ export function CategoryScopeSelector({
     };
 
     const addScope = (id: string) => {
+        if (!_canAddScope) return;
         if (selectedIds.includes(id)) {
             toast.info('این شاخه قبلاً انتخاب شده است');
             return;
@@ -97,6 +117,7 @@ export function CategoryScopeSelector({
     };
 
     const confirmRemoveScope = (id: string) => {
+        if (!_canRemoveScope) return;
         const category = allCategories.find(c => c.id === id);
         const childCount = getDescendants(id).filter(c =>
             categorySelections.some((sel: any) => sel.categoryId === c.id)
@@ -115,7 +136,7 @@ export function CategoryScopeSelector({
     };
 
     const removeScope = () => {
-        if (!deleteConfirm) return;
+        if (!deleteConfirm || !_canRemoveScope) return;
         const newSelected = selectedIds.filter((i: string) => i !== deleteConfirm.id);
         setValue('config.allowedCategoryScope', newSelected);
         setDeleteConfirm(null);
@@ -146,27 +167,83 @@ export function CategoryScopeSelector({
         return <div className="flex items-center justify-center p-4"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" /></div>;
     }
 
+    // ============================================================
+    // حالت فقط مشاهده برای مالک بدون دسترسی
+    // ============================================================
+    if (isOwnerWithNoAccess && !_canView) {
+        return (
+            <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h4 className="text-sm font-semibold text-on-surface">زمینه فعالیت بازار</h4>
+                        <p className="text-xs text-on-surface-variant">فقط قابل مشاهده</p>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-on-surface-variant/50">
+                        <Lock className="w-3.5 h-3.5" />
+                        <span className="text-[10px]">فقط مشاهده</span>
+                    </div>
+                </div>
+
+                {selectedIds.length === 0 ? (
+                    <div className="bg-gray-50/50 dark:bg-gray-800/30 border border-dashed border-gray-200 dark:border-gray-700 p-3 rounded-lg text-center text-sm text-gray-400">
+                        هیچ زمینه فعالیتی تعیین نشده است
+                    </div>
+                ) : (
+                    <div className="flex flex-wrap gap-2 p-2 bg-gray-50/30 dark:bg-gray-800/20 border border-gray-200 dark:border-gray-700 rounded-lg">
+                        {selectedIds.map((id: string) => {
+                            const category = allCategories.find(c => c.id === id);
+                            return (
+                                <span key={id} className="px-3 py-1.5 rounded-full text-sm font-medium bg-surface text-on-surface-variant flex items-center gap-1.5">
+                                    <Building2 className="w-3 h-3" />
+                                    {category?.title || id}
+                                </span>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
+        );
+    }
+
+    // ============================================================
+    // حالت کامل با دسترسی‌ها
+    // ============================================================
     return (
         <div className="space-y-3">
             <div className="flex items-center justify-between">
                 <div>
                     <h4 className="text-sm font-semibold text-on-surface">زمینه فعالیت بازار</h4>
-                    <p className="text-xs text-on-surface-variant">برای فیلتر کردن گروه‌ها، روی هر زمینه کلیک کنید</p>
+                    <p className="text-xs text-on-surface-variant">
+                        برای فیلتر کردن گروه‌ها، روی هر زمینه کلیک کنید
+                        {!_canAddScope && !isAdmin && ' - فقط قابل مشاهده'}
+                    </p>
                 </div>
-                {!disabled && (
+                {_canAddScope && (
                     <button type="button" onClick={() => setShowAddModal(true)}
                             className="flex items-center gap-1 bg-primary text-on-primary px-3 py-1.5 text-sm rounded-lg hover:bg-primary/90 transition-colors">
                         <Plus className="w-4 h-4" />افزودن
                     </button>
                 )}
+                {!_canAddScope && !isAdmin && (
+                    <div className="flex items-center gap-1.5 text-on-surface-variant/50">
+                        <Lock className="w-3.5 h-3.5" />
+                        <span className="text-[10px]">فقط مشاهده</span>
+                    </div>
+                )}
             </div>
 
             {selectedIds.length === 0 ? (
-                <div className="bg-surface-container-low border border-dashed border-outline-variant p-3 rounded-lg text-center text-sm text-on-surface-variant">
+                <div className={cn(
+                    "border border-dashed p-3 rounded-lg text-center text-sm",
+                    isOwnerWithNoAccess ? 'bg-gray-50/50 dark:bg-gray-800/30 border-gray-200 dark:border-gray-700 text-gray-400' : 'bg-surface-container-low border-outline-variant text-on-surface-variant'
+                )}>
                     هیچ زمینه فعالیتی تعیین نشده است
                 </div>
             ) : (
-                <div className="flex flex-wrap gap-2 p-2 bg-surface-container-low border border-outline-variant rounded-lg">
+                <div className={cn(
+                    "flex flex-wrap gap-2 p-2 border rounded-lg",
+                    isOwnerWithNoAccess ? 'bg-gray-50/30 dark:bg-gray-800/20 border-gray-200 dark:border-gray-700' : 'bg-surface-container-low border-outline-variant'
+                )}>
                     <button type="button" onClick={() => onScopeSelect && onScopeSelect(null)}
                             className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
                                 activeScopeId === null ? 'bg-primary text-on-primary' : 'bg-surface text-on-surface-variant hover:bg-surface-container'
@@ -191,7 +268,7 @@ export function CategoryScopeSelector({
                                 <Building2 className="w-3 h-3" />
                                 {category?.title || id}
                                 {childCount > 0 && <span className="text-xs opacity-70">({childCount})</span>}
-                                {!disabled && (
+                                {_canRemoveScope && (
                                     <span
                                         onClick={(e) => { e.stopPropagation(); confirmRemoveScope(id); }}
                                         className={`p-0.5 rounded-full hover:bg-black/10 transition-colors cursor-pointer ${
@@ -201,14 +278,17 @@ export function CategoryScopeSelector({
                                         {deletable ? <X className="w-3 h-3" /> : '🔒'}
                                     </span>
                                 )}
+                                {!_canRemoveScope && !isAdmin && (
+                                    <Eye className="w-3 h-3 text-on-surface-variant/30" />
+                                )}
                             </button>
                         );
                     })}
                 </div>
             )}
 
-            {/* مودال افزودن زمینه فعالیت */}
-            {showAddModal && (
+            {/* مودال افزودن */}
+            {showAddModal && _canAddScope && (
                 <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50">
                     <div className="bg-surface p-6 rounded-xl max-w-lg w-full max-h-[80vh] flex flex-col shadow-2xl">
                         <div className="flex items-center justify-between mb-4">
@@ -237,7 +317,7 @@ export function CategoryScopeSelector({
             )}
 
             {/* مودال تأیید حذف */}
-            {deleteConfirm && (
+            {deleteConfirm && _canRemoveScope && (
                 <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 p-4">
                     <div className="bg-surface w-full max-w-sm rounded-2xl shadow-2xl border border-outline-variant">
                         <div className="flex items-center justify-between px-5 py-4 border-b">
