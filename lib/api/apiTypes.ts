@@ -279,7 +279,7 @@ export interface CreateAdDto {
     province?: string;
     city: string;
     locationDetail?: string;
-    validityDays?: number;
+    validityHours?: number;
     isAnonymous?: boolean;
     isBumped?: boolean;
     customFields?: AdCustomFields;

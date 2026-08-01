@@ -239,7 +239,7 @@ export function PaymentSection({ register, errors, watch, setValue, control, isA
             <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl flex items-start gap-2">
                 <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
                 <p className="text-xs text-blue-800 dark:text-blue-300">
-                    مبالغ اعضا برای خرید اعتبار، مستقیماً به حساب شما واریز می‌شود.
+                    درآمد بازار، مستقیماً به حساب مدیر بازار واریز می‌شود.
                 </p>
             </div>
 
@@ -247,10 +247,9 @@ export function PaymentSection({ register, errors, watch, setValue, control, isA
             <div className="space-y-3 border border-emerald-200 dark:border-emerald-800 bg-emerald-50/30 dark:bg-emerald-900/10 rounded-xl p-4">
                 <div className="flex items-center gap-2">
                     <Wallet className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                    <h4 className="font-semibold text-sm text-on-surface">
-                        پرداخت کارت به کارت (فیشی)
+                    <h4 className="font-semibold text-sm text-on-surface">شماره کارت خود را وارد کنید
                     </h4>
-                    <span className="text-[9px] text-emerald-500">(مشخصات حساب خود را وارد کنید)</span>
+
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

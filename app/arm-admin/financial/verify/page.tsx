@@ -63,10 +63,9 @@ export default function VerifyPaymentsPage() {
     // ============================================================
     const fetchPayments = async () => {
         if (!currentSlug) return;
-
         setLoading(true);
         try {
-            const data = await apiService.credit.getArmPayments(currentSlug);
+            const data = await apiService.armAdmin.getPayments(currentSlug);
             setPayments(data);
         } catch (error: any) {
             console.error('Error fetching payments:', error);

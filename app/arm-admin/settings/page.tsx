@@ -6,7 +6,12 @@ import { useSelector } from 'react-redux';
 import { RootState } from '@/lib/store/store';
 import { useForm } from 'react-hook-form';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Loader2, AlertCircle, RefreshCw, TrendingUp, ShoppingCart, Check, Save } from 'lucide-react';
+import {
+    Save,
+    Loader2,
+    AlertCircle,
+    RefreshCw,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { apiService } from '@/lib/api/apiService';
 import { cn } from '@/lib/utils';
@@ -35,7 +40,7 @@ const TABS: { id: SettingsTab; label: string; icon: string }[] = [
     { id: 'industries', label: 'صنوف', icon: '🏭' },
     { id: 'locations', label: 'موقعیت‌ها', icon: '📍' },
     { id: 'labels', label: 'برچسب‌ها', icon: '🏷️' },
-    { id: 'permissions', label: 'دسترسی مالک', icon: '🛡️' },
+    { id: 'permissions', label: 'دسترسی های من', icon: '🛡️' },
 ];
 
 export default function ArmAdminSettings() {
@@ -49,17 +54,17 @@ export default function ArmAdminSettings() {
     const tabFromUrl = (searchParams.get('tab') as SettingsTab) || 'general';
     const [activeTab, setActiveTab] = useState<SettingsTab>(tabFromUrl);
     const [loading, setLoading] = useState(true);
-    const [isAutoSaving, setIsAutoSaving] = useState(false);
+    const [saving, setSaving] = useState(false);
     const [settings, setSettings] = useState<any>(null);
     const [hasChanges, setHasChanges] = useState(false);
     const [activeScopeId, setActiveScopeId] = useState<string | null>(null);
 
-    // ✅ useForm - همیشه تعریف می‌شود
-    const { register, watch, setValue, control, handleSubmit, formState: { errors }, reset } = useForm({
+    // ✅ useForm
+    const { register, watch, setValue, control, formState: { errors }, reset } = useForm({
         defaultValues: settings || {},
     });
 
-    // تغییر تب با آپدیت URL
+    // ✅ تغییر تب با آپدیت URL
     const handleTabChange = (tab: SettingsTab) => {
         setActiveTab(tab);
         const params = new URLSearchParams(searchParams.toString());
@@ -73,6 +78,16 @@ export default function ArmAdminSettings() {
             setActiveTab(tab);
         }
     }, [searchParams]);
+
+    // ✅ مانیتور تغییرات فرم
+    useEffect(() => {
+        const subscription = watch((value, { name, type }) => {
+            if (name && type === 'change') {
+                setHasChanges(true);
+            }
+        });
+        return () => subscription.unsubscribe();
+    }, [watch]);
 
     const fetchSettings = useCallback(async () => {
         if (!currentSlug) return;
@@ -105,60 +120,31 @@ export default function ArmAdminSettings() {
 
     useEffect(() => { fetchSettings(); }, [fetchSettings]);
 
-    // ✅ تابع ذخیره واقعی
-    const saveSettings = useCallback(async (data: any) => {
+    const handleSave = async () => {
         if (!currentSlug || !settings) return;
+        setSaving(true);
         try {
+            const formData = watch();
             const updateData: any = {
-                name: data.name || settings.name,
-                shortName: data.shortName || settings.shortName,
-                slogan: data.slogan || settings.slogan,
-                description: data.description || settings.description,
-                mission: data.mission || settings.mission,
-                status: data.status || settings.status,
-                colorPrimary: data.colorPrimary || settings.colorPrimary,
-                colorSecondary: data.colorSecondary || settings.colorSecondary,
-                config: data.config || settings.config,
+                name: formData.name || settings.name,
+                shortName: formData.shortName || settings.shortName,
+                slogan: formData.slogan || settings.slogan,
+                description: formData.description || settings.description,
+                mission: formData.mission || settings.mission,
+                status: formData.status || settings.status,
+                colorPrimary: formData.colorPrimary || settings.colorPrimary,
+                colorSecondary: formData.colorSecondary || settings.colorSecondary,
+                config: formData.config || settings.config,
             };
             await apiService.armAdmin.updateSettings(currentSlug, updateData);
+            toast.success('تنظیمات ذخیره شد');
             setHasChanges(false);
             await fetchSettings();
         } catch (error: any) {
-            toast.error(error?.message || 'خطا در ذخیره تنظیمات');
-            throw error;
+            toast.error(error?.message || 'خطا در ذخیره');
+        } finally {
+            setSaving(false);
         }
-    }, [currentSlug, settings, fetchSettings]);
-
-    // ✅ Auto-save
-    const handleAutoSave = useCallback(() => {
-        if (!isAutoSaving && hasChanges) {
-            setIsAutoSaving(true);
-            handleSubmit((data) => {
-                saveSettings(data)
-                    .then(() => {
-                        setTimeout(() => setIsAutoSaving(false), 500);
-                    })
-                    .catch(() => {
-                        setIsAutoSaving(false);
-                    });
-            })();
-        }
-    }, [handleSubmit, saveSettings, isAutoSaving, hasChanges]);
-
-    // ✅ مانیتور تغییرات فرم
-    useEffect(() => {
-        const subscription = watch(() => {
-            setHasChanges(true);
-        });
-        return () => subscription.unsubscribe();
-    }, [watch]);
-
-    // ✅ تغییر تب با ذخیره خودکار
-    const handleTabChangeWithSave = (tab: SettingsTab) => {
-        if (hasChanges) {
-            handleAutoSave();
-        }
-        handleTabChange(tab);
     };
 
     const handleSetValue = useCallback((name: any, value: any) => {
@@ -186,25 +172,10 @@ export default function ArmAdminSettings() {
         );
     }
 
-    return (
-        <div className="space-y-4 pb-20">
-            {/* وضعیت ذخیره‌سازی */}
-            <div className="text-[11px] flex justify-end items-center gap-2 ">
-                {isAutoSaving ? (
-                    <span className="flex items-center gap-2 text-on-surface-variant">
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        در حال ذخیره...
-                    </span>
-                ) : hasChanges ? (
-                    <span className="text-amber-600 dark:text-amber-400">تغییرات ذخیره نشده</span>
-                ) : (
-                    <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                        <Check className="w-4 h-4" />
-                        ذخیره شد
-                    </span>
-                )}
-            </div>
+    const showSaveButton = ['general', 'economy', 'payment', 'labels'].includes(activeTab);
 
+    return (
+        <div className="space-y-6 pb-20">
             {/* تب‌ها */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div className="relative w-full">
@@ -226,7 +197,7 @@ export default function ArmAdminSettings() {
                                 return (
                                     <button
                                         key={tab.id}
-                                        onClick={() => handleTabChangeWithSave(tab.id)}
+                                        onClick={() => handleTabChange(tab.id)}
                                         className={cn(
                                             "flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-all whitespace-nowrap flex-shrink-0",
                                             isActive
@@ -246,7 +217,7 @@ export default function ArmAdminSettings() {
             </div>
 
             {/* محتوای تب‌ها */}
-            <div className="bg-white dark:bg-gray-900 rounded-xl border border-outline-variant/20 dark:border-gray-800 p-4 sm:p-6">
+            <div className="bg-white  rounded-xl border border-outline-variant/20 dark:border-gray-800 p-4 sm:p-6">
                 {activeTab === 'general' && (
                     <GeneralSection
                         register={register}
@@ -263,21 +234,19 @@ export default function ArmAdminSettings() {
                         <ModuleSettingsSection
                             watch={watch}
                             setValue={handleSetValue}
-                            onSave={handleAutoSave}
-                            isSaving={isAutoSaving}
+                            onSave={() => {}}
+                            isSaving={saving}
                             moduleKey="priceTable"
                             moduleName="تابلوی قیمت"
-                            moduleIcon={TrendingUp}
                             isAdmin={isSystemAdmin}
                         />
                         <ModuleSettingsSection
                             watch={watch}
                             setValue={handleSetValue}
-                            onSave={handleAutoSave}
-                            isSaving={isAutoSaving}
+                            onSave={() => {}}
+                            isSaving={saving}
                             moduleKey="buyLead"
                             moduleName="تابلوی درخواست خرید"
-                            moduleIcon={ShoppingCart}
                             isAdmin={isSystemAdmin}
                         />
                     </div>
@@ -287,8 +256,8 @@ export default function ArmAdminSettings() {
                     <AccessRulesSection
                         watch={watch}
                         setValue={handleSetValue}
-                        onSave={handleAutoSave}
-                        isSaving={isAutoSaving}
+                        onSave={() => {}}
+                        isSaving={saving}
                         isAdmin={isSystemAdmin}
                     />
                 )}
@@ -311,46 +280,38 @@ export default function ArmAdminSettings() {
                             setValue={setValue}
                             disabled={true}
                             categorySelections={watch('config.categorySelections')}
-                            onSave={handleAutoSave}
+                            onSave={() => {}}
                             activeScopeId={activeScopeId}
                             onScopeSelect={setActiveScopeId}
                             isAdmin={isSystemAdmin}
-                            canAddScope={true}
-                            canRemoveScope={true}
                         />
                         <CategorySelector
                             control={control}
                             watch={watch}
                             setValue={setValue}
                             disabled={true}
-                            onSave={handleAutoSave}
+                            onSave={() => {}}
                             activeScopeId={activeScopeId}
                             isAdmin={isSystemAdmin}
-                            canAddLeaf={true}
-                            canRemoveLeaf={true}
-                            canChangeUnit={true}
                         />
                     </div>
                 )}
 
                 {activeTab === 'industries' && (
                     <IndustrySelector
+                        register={register} // ✅ حتماً register را پاس دهید
                         watch={watch}
-                        setValue={handleSetValue}
-                        onSave={handleAutoSave}
-                        isSaving={isAutoSaving}
+                        setValue={setValue}
                         isAdmin={isSystemAdmin}
                     />
                 )}
 
                 {activeTab === 'locations' && (
                     <LocationSelector
-                        control={control}
+                        control={control} // ✅ control را پاس دهید
                         watch={watch}
                         setValue={setValue}
-                        onSave={handleAutoSave}
-                        isAdmin={isSystemAdmin}
-                        isSaving={isAutoSaving}
+                        onSave={() => {}}
                     />
                 )}
 
@@ -358,8 +319,8 @@ export default function ArmAdminSettings() {
                     <FormLabelsSection
                         watch={watch}
                         setValue={handleSetValue}
-                        onSave={handleAutoSave}
-                        isSaving={isAutoSaving}
+                        onSave={() => {}}
+                        isSaving={saving}
                         isAdmin={isSystemAdmin}
                     />
                 )}
@@ -368,8 +329,8 @@ export default function ArmAdminSettings() {
                     <EconomySection
                         watch={watch}
                         setValue={handleSetValue}
-                        onSave={handleAutoSave}
-                        isSaving={isAutoSaving}
+                        onSave={() => {}}
+                        isSaving={saving}
                         isAdmin={isSystemAdmin}
                     />
                 )}
@@ -379,23 +340,41 @@ export default function ArmAdminSettings() {
                         watch={watch}
                         setValue={handleSetValue}
                         isAdmin={isSystemAdmin}
-                        isSaving={isAutoSaving}
-                        onSave={handleAutoSave}
+                        isSaving={saving}
                     />
                 )}
             </div>
 
-            {/* دکمه ذخیره موبایل */}
-            <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-outline-variant/20 dark:border-gray-800 p-4 z-40 lg:hidden">
+            {/* دکمه ذخیره */}
+            {showSaveButton && (
                 <button
-                    onClick={handleAutoSave}
-                    disabled={!hasChanges || isAutoSaving}
-                    className="w-full bg-primary text-on-primary py-3 rounded-xl font-medium flex items-center justify-center gap-2 disabled:opacity-50"
+                    onClick={handleSave}
+                    disabled={!hasChanges || saving}
+                    className={cn(
+                        "fixed -top-2 left-16 z-50 flex items-center gap-1 px-2 py-1.5 rounded text-[10px] transition-all shadow-lg",
+                        hasChanges
+                            ? "bg-primary text-on-primary hover:bg-primary/90 shadow-primary/30"
+                            : "bg-surface-container-high dark:bg-gray-800 text-on-surface-variant dark:text-gray-400 cursor-not-allowed shadow-none",
+                    )}
                 >
-                    {isAutoSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-                    {isAutoSaving ? 'در حال ذخیره...' : 'ذخیره تغییرات'}
+                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    {saving ? 'در حال ذخیره...' : 'ذخیره تغییرات'}
                 </button>
-            </div>
+            )}
+
+            {/* دکمه ذخیره موبایل */}
+            {showSaveButton && (
+                <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-outline-variant/20 dark:border-gray-800 p-4 z-40 lg:hidden">
+                    <button
+                        onClick={handleSave}
+                        disabled={!hasChanges || saving}
+                        className="w-full bg-primary text-on-primary py-3 rounded-xl font-medium flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                        {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+                        ذخیره تغییرات
+                    </button>
+                </div>
+            )}
         </div>
     );
 }

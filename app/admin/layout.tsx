@@ -33,7 +33,7 @@ import {
     Layers,
     Home,
     ChevronDown,
-    ArrowRight,
+    ArrowRight, MessageSquare,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/app/components/ThemeToggle';
@@ -70,6 +70,7 @@ const menuGroups: MenuGroup[] = [
             { href: '/admin/credits', label: 'اعتبارات', icon: CreditCard },
             { href: '/admin/payments', label: 'پرداخت‌ها', icon: Receipt },
             { href: '/admin/analytics', label: 'گزارشات', icon: TrendingUp },
+            { href: '/admin/feedbacks', label: 'بازخوردها', icon: MessageSquare },
         ],
     },
     {

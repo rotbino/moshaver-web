@@ -1,109 +1,199 @@
 // app/home/AdCard.tsx
 'use client';
 import React from 'react';
-import { Clock, MapPin, Package, Phone, TrendingUp } from 'lucide-react';
+import Image from 'next/image';
+import {
+    Clock, MapPin, Package, TrendingUp, BadgeCheck, Layers,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface AdCardProps {
     ad: any;
     onContact: (adId: string) => void;
     onDetail: (ad: any) => void;
-    categoryUnitMap?: Map<string, string>; // optional, fallback to ad.unit.shortCode
 }
 
-export default function AdCard({ ad, onContact, onDetail }: AdCardProps) {
-    const unitShortCode = ad.unit?.shortCode || 'تن';
-    const paymentMethods = ad.customFields?.paymentMethods;
-    const hasCheque = paymentMethods?.cheque?.enabled;
-    const hasInstallment = paymentMethods?.installment?.enabled;
+function formatNum(n: number | undefined) {
+    return n?.toLocaleString('fa-IR') ?? '—';
+}
+
+export default function AdCard({ ad, onDetail }: AdCardProps) {
+    const unit = ad.unit?.shortCode || 'تن';
+    const payment = ad.customFields?.paymentMethods;
+    const hasCheque = payment?.cheque?.enabled;
+    const hasInstallment = payment?.installment?.enabled;
+    const tier = ad.business?.verificationTier;
+    const hoursLeft = Math.ceil(
+        (new Date(ad.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60),
+    );
+    const isUrgent = hoursLeft > 0 && hoursLeft <= 12;
+
+    const adImage = ad.files?.find((f: any) => f.fieldKey?.startsWith('ad-image'));
+    const imageUrl = adImage
+        ? `${process.env.NEXT_PUBLIC_API_BASE_URL}/file/${adImage.id}/thumbnail`
+        : '/images/no_product_image.jpg';
+
+    const tierColor =
+        tier === 'gold' ? 'text-yellow-500 dark:text-yellow-400' :
+            tier === 'silver' ? 'text-gray-400 dark:text-gray-300' :
+                tier === 'blue' ? 'text-blue-500 dark:text-blue-400' : '';
 
     return (
         <div
             onClick={() => onDetail(ad)}
-            className="bg-surface-container-lowest border border-outline-variant p-3 pt-5 flex flex-col gap-2 rounded-sm group hover:shadow-md transition-shadow min-w-0 relative cursor-pointer"
+            className={cn(
+                'relative overflow-hidden rounded-xl cursor-pointer group',
+                'bg-white dark:bg-gray-900',
+                'border border-outline-variant/15 dark:border-gray-800/80',
+                'hover:shadow-md hover:border-primary/20 dark:hover:border-primary/25',
+                'active:scale-[0.99] transition-all duration-200',
+            )}
         >
-            {/* نردبان */}
+            {/* بج نردبان */}
             {ad.isBumped && (
-                <div className="absolute top-1 right-2 flex items-center h-3.5 gap-1 text-red-600 bg-red-50/90 px-2 py-0.5 rounded-full border border-red-200 shadow-sm z-10">
-                    <TrendingUp className="w-3 h-3" />
-                    <span className="text-[8px] font-bold text-red-600">نردبان</span>
+                <div className="absolute top-2 right-2 z-20 flex items-center gap-0.5 bg-gradient-to-l from-orange-500 to-rose-500 text-white text-[9px] font-extrabold px-1.5 py-[3px] rounded-md shadow-lg">
+                    <TrendingUp className="w-2.5 h-2.5" />
+                    نردبان
                 </div>
             )}
 
-            <div className="flex items-start justify-between gap-2">
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className="w-11 h-11 min-w-11 bg-surface-container-high flex items-center justify-center rounded-sm border border-outline-variant/50">
-                        <span className="material-symbols-outlined text-primary text-xl">grid_view</span>
+            {/* ═══ موبایل: افقی ═══ */}
+            <div className="flex lg:hidden items-center gap-4 p-4">
+                <div className="relative w-[76px] h-[76px] rounded-xl overflow-hidden bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800 flex-shrink-0">
+                    <Image
+                        src={imageUrl}
+                        alt={ad.productType || ad.title}
+                        fill
+                        className="object-contain p-1.5"
+                        sizes="76px"
+                        unoptimized
+                    />
+                </div>
+
+                <div className="flex-1 min-w-0 flex flex-col justify-center gap-[5px]">
+                    <div className="flex items-center gap-1 min-w-0">
+                        <h3 className="font-bold text-[13px] text-gray-900 dark:text-white truncate leading-tight">
+                            {ad.productType || ad.title}
+                        </h3>
+                        {tier && tier !== 'none' && (
+                            <BadgeCheck className={cn("w-3.5 h-3.5 shrink-0 -mt-px", tierColor)} strokeWidth={2.5} />
+                        )}
                     </div>
-                    <div className="flex flex-col min-w-0 gap-0.5">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                            <h3 className="font-bold text-sm text-on-surface truncate">{ad.productType || ad.title}</h3>
-                            {ad.category?.title && (
-                                <span className="text-[9px] bg-surface-container-high text-on-surface-variant px-1.5 py-0.5 rounded-full flex-shrink-0">
-                  {ad.category.title}
-                </span>
-                            )}
-                        </div>
-                        <div className="flex items-center gap-1 text-[10px] text-on-surface-variant truncate">
-                            <span>{ad.business?.name || 'نامشخص'}</span>
-                            {ad.business?.verificationTier === 'verified' && (
-                                <span className="material-symbols-outlined text-[14px] text-green-600">verified</span>
-                            )}
-                        </div>
-                        {(hasCheque || hasInstallment) && (
-                            <div className="flex items-center gap-1.5 mt-0.5">
-                                {hasCheque && (
-                                    <span className="text-[8px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded-full">چکی</span>
-                                )}
-                                {hasInstallment && (
-                                    <span className="text-[8px] bg-green-50 text-green-600 px-1.5 py-0.5 rounded-full">اقساط</span>
-                                )}
-                            </div>
+
+                    <div className="flex items-center gap-1.5 text-[11px] text-gray-500 dark:text-gray-400 min-w-0">
+                        <span className="truncate">{ad.business?.name || '—'}</span>
+                        {ad.city && (
+                            <>
+                                <span className="text-gray-200 dark:text-gray-700 shrink-0">·</span>
+                                <MapPin className="w-3 h-3 shrink-0 text-primary/60" />
+                                <span className="shrink-0">{ad.city}</span>
+                            </>
+                        )}
+                    </div>
+
+                    <div className="flex items-baseline gap-1">
+                        <span className="text-[18px] font-extrabold tracking-tight text-gray-900 dark:text-white leading-none">
+                            {formatNum(ad.unitPrice)}
+                        </span>
+                        <span className="text-[10px] text-gray-400 dark:text-gray-500 leading-none">
+                            تومان/{unit}
+                        </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-[10.5px] text-gray-400 dark:text-gray-500 flex-wrap">
+                        <span className="flex items-center gap-0.5 shrink-0">
+                            <Package className="w-3 h-3" />
+                            {formatNum(ad.minQuantity)} {unit}
+                        </span>
+                        {ad.availableQuantity && (
+                            <span className="flex items-center gap-0.5 shrink-0">
+                                <Layers className="w-3 h-3" />
+                                {formatNum(ad.availableQuantity)} {unit}
+                            </span>
+                        )}
+                        {hasCheque && (
+                            <span className="font-semibold text-blue-500 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-1.5 py-px rounded shrink-0">چکی</span>
+                        )}
+                        {hasInstallment && (
+                            <span className="font-semibold text-emerald-500 dark:text-emerald-400 bg-green-50 dark:bg-green-900/20 px-1.5 py-px rounded shrink-0">اقساط</span>
+                        )}
+                        {isUrgent && (
+                            <span className="flex items-center gap-0.5 text-red-500 shrink-0">
+                                <Clock className="w-3 h-3 animate-pulse" />
+                                فوری
+                            </span>
                         )}
                     </div>
                 </div>
-
-                <div className="text-left flex-shrink-0 flex flex-col items-end">
-          <span className="font-bold text-sm text-primary">
-            {ad.unitPrice.toLocaleString()}
-              <span className="text-[9px] font-normal text-on-surface-variant">ت/{unitShortCode}</span>
-          </span>
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onContact(ad.id);
-                        }}
-                        disabled={false}
-                        className="bg-primary text-on-primary text-[10px] px-2.5 py-1 rounded-sm active:scale-95 transition-transform font-medium mt-1 flex items-center gap-1 disabled:opacity-50"
-                    >
-                        <Phone className="w-3 h-3" /> تماس
-                    </button>
-                </div>
             </div>
 
-            <div className="flex items-center justify-between text-[10px] border-t border-outline-variant/50 pt-2 mt-1">
-                <div className="flex items-center gap-3">
-          <span className="flex items-center gap-1 text-on-surface font-medium bg-surface-container-high px-1.5 py-0.5 rounded-sm">
-            <Package className="w-3 h-3 text-primary" />min: {ad.minQuantity} {unitShortCode}
-          </span>
-                    <span className="flex items-center gap-1 text-on-surface-variant">
-            <MapPin className="w-3 h-3" />{ad.city || 'نامشخص'}
-          </span>
+            {/* ═══ دسکتاپ: عمودی فشرده ═══ */}
+            <div className="hidden lg:flex flex-col">
+                <div className="relative w-full aspect-[5/3] bg-gray-50 dark:bg-gray-800/30 border-b border-gray-100 dark:border-gray-800">
+                    <Image
+                        src={imageUrl}
+                        alt={ad.productType || ad.title}
+                        fill
+                        className="object-contain p-3"
+                        sizes="(max-width:1280px) 33vw, 25vw"
+                        unoptimized
+                    />
                 </div>
-                <div className="flex items-center gap-2">
-          <span className="flex items-center gap-1 text-on-surface-variant">
-            <Clock className="w-3 h-3" />
-              {Math.ceil((new Date(ad.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60))} س
-          </span>
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onDetail(ad);
-                        }}
-                        className="text-primary text-[10px] font-medium hover:underline"
-                    >
-                        جزئیات
-                    </button>
+
+                <div className="p-3 flex flex-col gap-1.5">
+                    <div className="flex items-center gap-1 min-w-0">
+                        <h3 className="font-bold text-[12.5px] text-gray-900 dark:text-white truncate leading-tight">
+                            {ad.productType || ad.title}
+                        </h3>
+                        {tier && tier !== 'none' && (
+                            <BadgeCheck className={cn("w-3.5 h-3.5 shrink-0 -mt-px", tierColor)} strokeWidth={2.5} />
+                        )}
+                    </div>
+
+                    <div className="flex items-center gap-1.5 text-[11px] text-gray-500 dark:text-gray-400 min-w-0">
+                        <span className="truncate">{ad.business?.name || '—'}</span>
+                        {ad.city && (
+                            <>
+                                <span className="text-gray-200 dark:text-gray-700 shrink-0">·</span>
+                                <MapPin className="w-2.5 h-2.5 shrink-0 text-primary/60" />
+                                <span className="shrink-0">{ad.city}</span>
+                            </>
+                        )}
+                    </div>
+
+                    <div className="flex items-baseline gap-1">
+                        <span className="text-[17px] font-extrabold tracking-tight text-gray-900 dark:text-white leading-none">
+                            {formatNum(ad.unitPrice)}
+                        </span>
+                        <span className="text-[10px] text-gray-400 dark:text-gray-500 leading-none">
+                            تومان/{unit}
+                        </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-[10px] text-gray-400 dark:text-gray-500 flex-wrap">
+                        <span className="flex items-center gap-0.5 shrink-0">
+                            <Package className="w-2.5 h-2.5" />
+                            {formatNum(ad.minQuantity)} {unit}
+                        </span>
+                        {ad.availableQuantity && (
+                            <span className="flex items-center gap-0.5 shrink-0">
+                                <Layers className="w-2.5 h-2.5" />
+                                {formatNum(ad.availableQuantity)} {unit}
+                            </span>
+                        )}
+                        {hasCheque && (
+                            <span className="font-semibold text-blue-500 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-1.5 py-px rounded shrink-0">چکی</span>
+                        )}
+                        {hasInstallment && (
+                            <span className="font-semibold text-emerald-500 dark:text-emerald-400 bg-green-50 dark:bg-green-900/20 px-1.5 py-px rounded shrink-0">اقساط</span>
+                        )}
+                        {isUrgent && (
+                            <span className="flex items-center gap-0.5 text-red-500 shrink-0">
+                                <Clock className="w-2.5 h-2.5 animate-pulse" />
+                                فوری
+                            </span>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>

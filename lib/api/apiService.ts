@@ -21,15 +21,23 @@ export const apiService = {
     // ============================================================
     // AUTH
     // ============================================================
+// lib/api/apiService.ts – داخل بخش auth
+
     auth: {
         login: (data: LoginCredentials): Promise<LoginResponse> =>
             apiRequest('/auth/login', { method: 'POST', data }),
 
         register: (data: RegisterCredentials): Promise<RegisterResponse> =>
             apiRequest('/auth/register', { method: 'POST', data }),
+
         updateProfile: (data: { fullName: string }): Promise<User> =>
             apiRequest('/auth/profile', { method: 'PUT', data }),
+
         getProfile: (): Promise<User> => apiRequest('/auth/me'),
+
+        // ✅ تغییر رمز عبور (برای کاربران با رمز موقت یا عادی)
+        changePassword: (data: { currentPassword?: string; newPassword: string }): Promise<any> =>
+            apiRequest('/auth/change-password', { method: 'PUT', data }),
     },
 
 
@@ -137,8 +145,8 @@ export const apiService = {
         bump: (id: string): Promise<any> =>
             apiRequest(`/ad/${id}/bump`, { method: 'POST' }),
 
-        extend: (id: string, validityDays: number): Promise<Ad> =>
-            apiRequest(`/ad/${id}/extend`, { method: 'POST', data: { validityDays } }),
+        extend: (id: string, validityHours: number): Promise<Ad> =>
+            apiRequest(`/ad/${id}/extend`, { method: 'POST', data: { validityHours } }),
 
         getPriceHistory: (id: string): Promise<{ currentPrice: number; history: any[] }> =>
             apiRequest(`/ad/${id}/price-history`),
@@ -152,6 +160,9 @@ export const apiService = {
         }> =>
             apiRequest(`/ad/${id}/contact`),
 
+        bulkUpdate: (data: { updates: { id: string; unitPrice: number }[] }) =>
+            apiRequest('/ad/bulk-update', { method: 'PUT', data }),
+
     },
 
     // ============================================================
@@ -164,9 +175,12 @@ export const apiService = {
         purchase: (data: PurchaseCreditDto): Promise<PurchaseCreditResponse> =>
             apiRequest('/credit/purchase', { method: 'POST', data }),
 
-        // ... بقیه متدها
+        manualPurchase: (data: PurchaseCreditDto): Promise<PurchaseCreditResponse> =>
+            apiRequest('/credit/manual', { method: 'POST', data }),
 
-        // 🆕 متدهای جدید برای مالک بازار
+        getBankInfo: (armId: string): Promise<{ paymentMethods: string[]; bankAccountNumber?: string; bankShebaNumber?: string; bankAccountOwner?: string }> =>
+            apiRequest(`/credit/bank-info/${armId}`),
+        // 🆕 متدهای جدید برای مدیر بازو
         getArmPayments: (slug: string, status?: string): Promise<any> =>
             apiRequest(`/credit/arm/${slug}/payments`, { params: { status } }),
 
@@ -183,6 +197,12 @@ export const apiService = {
                 method: 'POST',
                 data: { reason },
             }),
+        getCombinedTransactions: (params?: {
+            limit?: number;
+            offset?: number;
+            paymentMethod?: 'online' | 'manual';
+            status?: 'pending' | 'success' | 'failed';
+        }) => apiClient.get('/credit/transactions/combined', { params }),
     },
 
     // ============================================================
@@ -265,7 +285,13 @@ export const apiService = {
         setOne: (key: string, value: any): Promise<any> =>
             apiRequest(`/admin/settings/${key}`, { method: 'PUT', data: { value } }),
     },
-    // lib/api/apiService.ts
+
+    feedback: {
+        getList: (armSlug: string, page = 1) => apiRequest(`/feedback/arm/${armSlug}?page=${page}`),
+        getReplies: (parentId: string) => apiRequest(`/feedback/replies/${parentId}`),
+        create: (data: { armSlug?: string; content: string; type?: string; parentId?: string }) =>
+            apiRequest('/feedback', { method: 'POST', data }),
+    },
 
 
 
@@ -397,6 +423,17 @@ export const apiService = {
             getList: (params: any): Promise<any> => apiRequest('/admin/businesses', { params }),
             getDetail: (id: string): Promise<any> => apiRequest(`/admin/businesses/${id}`),
             verify: (id: string, data: any): Promise<any> => apiRequest(`/admin/businesses/${id}/verify`, { method: 'POST', data }),
+        },
+
+        feedbacks: {
+            getList: (params?: { armSlug?: string; page?: number; type?: string; status?: string }) =>
+                apiRequest('/admin/feedbacks', { params }),
+            getReplies: (id: string) =>
+                apiRequest(`/admin/feedbacks/${id}/replies`),
+            reply: (id: string, content: string) =>
+                apiRequest(`/admin/feedbacks/${id}/reply`, { method: 'POST', data: { content } }),
+            updateStatus: (id: string, status: string) =>
+                apiRequest(`/admin/feedbacks/${id}/status`, { method: 'PATCH', data: { status } }),
         },
 
     },

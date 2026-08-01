@@ -9,7 +9,7 @@ import { FileUploader } from '@/components/common/FileUploader';
 import { useUploadFile } from '@/lib/api/apiHooks';
 import { setArm } from '@/lib/store/slices/armSlice';
 import { toast } from 'sonner';
-import { Loader2, Upload, Check, Palette, Info, Lock } from 'lucide-react';
+import {Loader2, Upload, Check, Palette, Info, Lock, Phone, Mail, Clock, User} from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // ============================================================
@@ -82,11 +82,19 @@ export function GeneralSection({
     const canEditIcon = isSystemAdmin || generalAccess.canEditIcon !== false;
     const canEditBanner = isSystemAdmin || generalAccess.canEditBanner !== false;
 
+    // ✅ دسترسی ویرایش اطلاعات پشتیبانی - همیشه فعال (مگر اینکه صراحتاً false باشد)
+    const supportAccess = armAdminPermission.support || {};
+    const canEditSupport = isSystemAdmin || supportAccess.canEdit !== false;
+
     const logoFileId = watch('config.general.logoFileId');
     const currentPrimary = watch('colorPrimary') || '#e65100';
 
-    const disabledClass = "bg-surface-container-low dark:bg-gray-800 border-outline-variant/20 dark:border-gray-700 text-on-surface/50 dark:text-gray-500 cursor-not-allowed";
-    const enabledClass = "bg-white dark:bg-gray-900 border-outline-variant/30 dark:border-gray-700 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all";
+    // خواندن مقادیر فعلی پشتیبانی (برای نمایش در صورت عدم وجود)
+    const supportPhone = watch('config.support.phone') || '';
+    const supportMobile = watch('config.support.mobile') || '';
+    const supportEmail = watch('config.support.email') || '';
+    const supportWorkingHours = watch('config.support.workingHours') || '';
+    const supportDescription = watch('config.support.description') || '';
 
     const handleLogoUpload = async (file: File) => {
         if (!armId) { toast.error('ابتدا بازار را ذخیره کنید'); return; }
@@ -174,7 +182,6 @@ export function GeneralSection({
                         />
                         {errors.name && <p className="text-error text-[11px]">نام بازار الزامی است</p>}
                     </div>
-
 
                     {/* slogan */}
                     <div className="space-y-1.5">
@@ -367,7 +374,6 @@ export function GeneralSection({
 
                             {/* ورودی کد HEX */}
                             <input
-                                //dir={"ltr"}
                                 type="text"
                                 value={typeof currentPrimary === 'string' ? currentPrimary : '#e65100'}
                                 onChange={(e) => {
@@ -394,6 +400,129 @@ export function GeneralSection({
                     </div>
                 </section>
             )}
+
+
+            {/* ═══════════════ 📞 اطلاعات پشتیبانی ═══════════════ */}
+            <section>
+                <div className="flex items-center gap-2 mb-4">
+                    <Phone className="w-4 h-4 text-primary" />
+                    <h3 className="text-sm font-bold text-on-surface dark:text-gray-100">اطلاعات پشتیبانی</h3>
+                </div>
+                <p className="text-[11px] text-on-surface-variant/60 dark:text-gray-500 mb-4">
+                  اطلاعات پشتیبانی تلفنی بازار را وارد کنید. تا کاربران بتوانند با شما تماس بگیرند.
+                </p>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* نام پشتیبان */}
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-on-surface-variant dark:text-gray-400 flex items-center gap-1.5">
+                            <User className="w-3.5 h-3.5" /> نام پشتیبان
+                        </label>
+                        <input
+                            {...register('config.support.name')}
+                            placeholder="علی محمدی"
+                            readOnly={!canEditSupport}
+                            className={cn(
+                                "w-full rounded-xl h-10 px-3 text-sm text-right placeholder:text-on-surface-variant/30",
+                                !canEditSupport
+                                    ? "bg-surface-container-low dark:bg-gray-800 border-outline-variant/20 dark:border-gray-700 text-on-surface/50 dark:text-gray-500 cursor-not-allowed"
+                                    : "bg-white dark:bg-gray-900 border-outline-variant/30 dark:border-gray-700 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                            )}
+                        />
+                    </div>
+                    {/* موبایل پشتیبانی */}
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-on-surface-variant dark:text-gray-400 flex items-center gap-1.5">
+                            <Phone className="w-3.5 h-3.5" /> همراه <span className="text-primary">*</span>
+                        </label>
+                        <input
+                            {...register('config.support.mobile')}
+                            placeholder="۰۹۱۲-۱۲۳-۴۵۶۷"
+                            readOnly={!canEditSupport}
+                            className={cn(
+                                "w-full rounded-xl h-10 px-3 text-sm text-right placeholder:text-on-surface-variant/30",
+                                !canEditSupport
+                                    ? "bg-surface-container-low dark:bg-gray-800 border-outline-variant/20 dark:border-gray-700 text-on-surface/50 dark:text-gray-500 cursor-not-allowed"
+                                    : "bg-white dark:bg-gray-900 border-outline-variant/30 dark:border-gray-700 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                            )}
+                        />
+                    </div>
+                    {/* تلفن ثابت (اختیاری) */}
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-on-surface-variant dark:text-gray-400 flex items-center gap-1.5">
+                            <Phone className="w-3.5 h-3.5" /> تلفن ثابت
+                        </label>
+                        <input
+                            {...register('config.support.phone')}
+                            placeholder="۰۲۱-۱۲۳۴۵۶۷۸"
+                            readOnly={!canEditSupport}
+                            className={cn(
+                                "w-full rounded-xl h-10 px-3 text-sm text-right placeholder:text-on-surface-variant/30",
+                                !canEditSupport
+                                    ? "bg-surface-container-low dark:bg-gray-800 border-outline-variant/20 dark:border-gray-700 text-on-surface/50 dark:text-gray-500 cursor-not-allowed"
+                                    : "bg-white dark:bg-gray-900 border-outline-variant/30 dark:border-gray-700 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                            )}
+                        />
+                    </div>
+
+
+
+                    {/* ایمیل */}
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-on-surface-variant dark:text-gray-400 flex items-center gap-1.5">
+                            <Mail className="w-3.5 h-3.5" /> ایمیل
+                        </label>
+                        <input
+                            {...register('config.support.email')}
+                            placeholder="support@barton.ir"
+                            readOnly={!canEditSupport}
+                            className={cn(
+                                "w-full rounded-xl h-10 px-3 text-sm text-right placeholder:text-on-surface-variant/30",
+                                !canEditSupport
+                                    ? "bg-surface-container-low dark:bg-gray-800 border-outline-variant/20 dark:border-gray-700 text-on-surface/50 dark:text-gray-500 cursor-not-allowed"
+                                    : "bg-white dark:bg-gray-900 border-outline-variant/30 dark:border-gray-700 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                            )}
+                        />
+                    </div>
+
+                    {/* ساعات کاری */}
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-on-surface-variant dark:text-gray-400 flex items-center gap-1.5">
+                            <Clock className="w-3.5 h-3.5" /> ساعات کاری
+                        </label>
+                        <input
+                            {...register('config.support.workingHours')}
+                            placeholder="شنبه تا چهارشنبه ۹ تا ۱۷"
+                            readOnly={!canEditSupport}
+                            className={cn(
+                                "w-full rounded-xl h-10 px-3 text-sm text-right placeholder:text-on-surface-variant/30",
+                                !canEditSupport
+                                    ? "bg-surface-container-low dark:bg-gray-800 border-outline-variant/20 dark:border-gray-700 text-on-surface/50 dark:text-gray-500 cursor-not-allowed"
+                                    : "bg-white dark:bg-gray-900 border-outline-variant/30 dark:border-gray-700 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                            )}
+                        />
+                    </div>
+
+                    {/* توضیحات پشتیبانی */}
+                    <div className="md:col-span-2 space-y-1.5">
+                        <label className="text-xs font-medium text-on-surface-variant dark:text-gray-400 flex items-center gap-1.5">
+                            <Info className="w-3.5 h-3.5" /> توضیحات
+                        </label>
+                        <textarea
+                            {...register('config.support.description')}
+                            rows={2}
+                            placeholder="توضیحات اضافی برای بخش پشتیبانی..."
+                            readOnly={!canEditSupport}
+                            className={cn(
+                                "w-full rounded-xl px-3 py-2 text-sm text-right resize-none placeholder:text-on-surface-variant/30",
+                                !canEditSupport
+                                    ? "bg-surface-container-low dark:bg-gray-800 border-outline-variant/20 dark:border-gray-700 text-on-surface/50 dark:text-gray-500 cursor-not-allowed"
+                                    : "bg-white dark:bg-gray-900 border-outline-variant/30 dark:border-gray-700 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                            )}
+                        />
+                    </div>
+                </div>
+            </section>
         </div>
     );
 }

@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/lib/store/store';
-import { Users, Package, CreditCard, TrendingUp, Loader2, ArrowLeft, Wallet } from 'lucide-react';
+import { Users, Package, CreditCard, TrendingUp, Loader2, ArrowLeft, Wallet, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { apiService } from '@/lib/api/apiService';
@@ -68,6 +68,29 @@ export default function ArmAdminDashboard() {
 
     return (
         <div className="space-y-6">
+            {/* باکس هشدار فیش‌های در انتظار (فقط اگر تعداد > 0) */}
+            {stats && stats.pendingPayments > 0 && (
+                <Link
+                    href="/arm-admin/financial/verify"
+                    className="flex items-center justify-between bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded-xl p-4 hover:shadow-md transition-all group"
+                >
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-full bg-amber-100 dark:bg-amber-800">
+                            <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+                                {stats.pendingPayments.toLocaleString('fa-IR')} فیش در انتظار تأیید
+                            </p>
+                            <p className="text-xs text-amber-600/80 dark:text-amber-400/80 mt-0.5">
+                                برای بررسی و تأیید یا رد کلیک کنید
+                            </p>
+                        </div>
+                    </div>
+                    <ArrowLeft className="w-4 h-4 text-amber-500 group-hover:translate-x-1 transition-transform" />
+                </Link>
+            )}
+
             {/* کارت‌های آماری */}
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
                 {statCards.map((card, index) => {

@@ -8,13 +8,13 @@ import { AppHeader, AppFooter } from '@/app/components';
 import { useVitrine } from '@/lib/api/apiHooks';
 import { apiService } from '@/lib/api/apiService';
 import { toast } from 'sonner';
-import { Package, RefreshCw, Headphones } from 'lucide-react';
+import { Package, RefreshCw, Headphones, CheckCircle2 } from 'lucide-react';
 import { useFilters } from '@/lib/hooks/useFilters';
 import { cn } from '@/lib/utils';
 import CategoryFilter from './CategoryFilter';
 import AdCard from './AdCard';
 import AdModal from './AdModal';
-import {LocationFilter} from "@/app/components/LocationFilter";
+import { LocationFilter } from "@/app/components/LocationFilter";
 
 export default function HomeContent() {
     const router = useRouter();
@@ -132,125 +132,119 @@ export default function HomeContent() {
 
     const hasAds = vitrineData?.ads && vitrineData.ads.length > 0;
 
-    const renderSortAndStockRow = () => {
-        if (!isLeaf || minQuantity <= 0) return null;
-        const descText = `بهترین پیشنهادها برای خرید ${minQuantity.toLocaleString()} ${selectedUnit} ${selectedNode?.title || ''}`;
-
-        return (
-            <>
-                {/* === تبلت و دسکتاپ (≥۶۴۰px) === */}
-                <div className="hidden sm:flex items-center justify-between gap-3 py-2 px-5  mb-3">
-                    <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">{descText}</div>
-                    <div className="flex items-center gap-3">
-                        <label className="flex items-center gap-2 text-xs text-on-surface-variant cursor-pointer select-none">
-                            <div className="relative flex items-center">
-                                <input type="checkbox" checked={sortByPrice} onChange={(e) => setSortByPrice(e.target.checked)} className="peer sr-only" />
-                                <div className="w-4 h-4 rounded border-2 border-outline-variant bg-surface-container-lowest peer-checked:bg-primary peer-checked:border-primary transition-colors flex items-center justify-center">
-                                    {sortByPrice && <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none"><path d="M2 6l2.5 2.5L10 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-                                </div>
-                            </div>
-                            <span>بهترین قیمت</span>
-                        </label>
-                        <label className="flex items-center gap-2 text-xs text-on-surface-variant cursor-pointer select-none">
-                            <div className="relative flex items-center">
-                                <input type="checkbox" checked={requireStock} onChange={(e) => setRequireStock(e.target.checked)} className="peer sr-only" />
-                                <div className="w-4 h-4 rounded border-2 border-outline-variant bg-surface-container-lowest peer-checked:bg-primary peer-checked:border-primary transition-colors flex items-center justify-center">
-                                    {requireStock && <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none"><path d="M2 6l2.5 2.5L10 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-                                </div>
-                            </div>
-                            <span>موجودی کافی</span>
-                        </label>
-                        <LocationFilter />
-                    </div>
-                </div>
-
-                {/* === موبایل (<۶۴۰px) === */}
-                <div className="flex sm:hidden flex-col gap-3 py-3 px-3">
-                    <div className="flex items-center  gap-3">
-                        <label className="flex items-center gap-2 text-xs text-on-surface-variant cursor-pointer select-none">
-                            <div className="relative flex items-center">
-                                <input type="checkbox" checked={sortByPrice} onChange={(e) => setSortByPrice(e.target.checked)} className="peer sr-only" />
-                                <div className="w-4 h-4 rounded border-2 border-outline-variant bg-surface-container-lowest peer-checked:bg-primary peer-checked:border-primary transition-colors flex items-center justify-center">
-                                    {sortByPrice && <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none"><path d="M2 6l2.5 2.5L10 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-                                </div>
-                            </div>
-                            <span className={"text-[11px]"}>بهترین قیمت</span>
-                        </label>
-                        <label className="flex items-center gap-2 text-xs text-on-surface-variant cursor-pointer select-none">
-                            <div className="relative flex items-center">
-                                <input type="checkbox" checked={requireStock} onChange={(e) => setRequireStock(e.target.checked)} className="peer sr-only" />
-                                <div className="w-4 h-4 rounded border-2 border-outline-variant bg-surface-container-lowest peer-checked:bg-primary peer-checked:border-primary transition-colors flex items-center justify-center">
-                                    {requireStock && <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none"><path d="M2 6l2.5 2.5L10 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-                                </div>
-                            </div>
-                            <span className={"text-[11px]"}>موجودی کافی</span>
-                        </label>
-                        <LocationFilter />
-                    </div>
-                    <div className="text-[10px] text-gray-400 dark:text-gray-500">{descText}</div>
-                </div>
-            </>
-        );
-    };
-
-    const renderEmptyState = () => (
-        <div className="text-center py-16 px-4">
-            <Package className="w-20 h-20 text-on-surface-variant/20 mx-auto mb-6" />
-            <h2 className="text-xl font-bold text-on-surface mb-3">{filterParams.categoryId || filterParams.minQuantity ? 'هیچ قیمتی با این فیلترها پیدا نشد' : 'هنوز قیمتی ثبت نشده است'}</h2>
-            <p className="text-sm text-on-surface-variant mb-8 max-w-md mx-auto leading-relaxed">{filterParams.categoryId || filterParams.minQuantity ? 'فیلترهای انتخاب‌شده را تغییر دهید یا از دسته‌بندی‌های دیگر دیدن کنید.' : 'اگر فروشنده عمده هستید، همین حالا اولین قیمت خود را ثبت کنید.'}</p>
-            <div className="flex items-center justify-center gap-3 flex-wrap">
-                {(filterParams.categoryId || filterParams.minQuantity) && (
-                    <button onClick={handleClearAll} className="h-10 px-5 bg-surface-container border border-outline-variant text-on-surface rounded-md text-sm font-medium hover:bg-surface-container-high transition-colors flex items-center gap-2">
-                        <RefreshCw className="w-4 h-4" /> پاک کردن فیلترها
-                    </button>
-                )}
-                {isAuthenticated && (
-                    <button onClick={() => router.push(`/ad/create?arm=${currentSlug}`)} className="h-10 px-5 bg-primary text-on-primary rounded-md text-sm font-medium hover:bg-primary/90 transition-colors shadow-sm">
-                        ثبت قیمت جدید
-                    </button>
-                )}
-            </div>
-        </div>
-    );
+    const toolbarDescriptionText = isLeaf && minQuantity > 0
+        ? `بهترین پیشنهادها برای خرید ${minQuantity.toLocaleString()} ${selectedUnit} ${selectedNode?.title || ''}`
+        : null;
 
     return (
-        <div className="min-h-screen flex flex-col bg-surface lg:pb-0 pb-24 ">
-            <div className="flex-1 w-full">
-                <AppHeader showLocation />
-                <div className="w-full mx-auto pt-16 lg:pt-0">
-                    <CategoryFilter
-                        categoryTree={categoryTree}
-                        selectedCategoryId={selectedCategoryId}
-                        onSelect={handleCategorySelect}
-                        isLeaf={isLeaf}
-                        selectedUnit={selectedUnit}
-                        minQuantity={minQuantity}
-                        onVolumeChange={handleVolumeChange}
-                    />
-                    {renderSortAndStockRow()}
-                    <div className="px-3">
-                        {vitrineLoading ? (
-                            <div className="text-center py-16">
-                                <div className="animate-spin rounded-full h-10 w-10 border-2 border-primary border-t-transparent mx-auto mb-4" />
-                                <p className="text-sm text-on-surface-variant">در حال بارگذاری قیمت‌ها...</p>
+        <div className="h-screen flex flex-col bg-surface dark:bg-gray-950">
+            {/* هدر: همیشه بالای صفحه */}
+            <AppHeader showLocation showBack={false} />
+
+            {/* فیلتر دسته‌بندی: چسبیده به زیر هدر */}
+            <div className="sticky top-0 z-30 bg-white dark:bg-gray-900 border-b border-outline-variant/20 dark:border-gray-800 shadow-sm flex-shrink-0">
+                <CategoryFilter
+                    categoryTree={categoryTree}
+                    selectedCategoryId={selectedCategoryId}
+                    onSelect={handleCategorySelect}
+                    isLeaf={isLeaf}
+                    selectedUnit={selectedUnit}
+                    minQuantity={minQuantity}
+                    onVolumeChange={handleVolumeChange}
+                />
+
+                {/* تولبار یکپارچه */}
+                {(toolbarDescriptionText || selectedCategoryId) && (
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 px-3 lg:px-6 py-2.5 bg-surface-container-lowest dark:bg-gray-900 border-t border-outline-variant/10 dark:border-gray-800">
+                        <p className="text-[11px] sm:text-xs text-on-surface-variant/60 dark:text-gray-400 leading-relaxed truncate">
+                            {toolbarDescriptionText}
+                        </p>
+
+                        <div className="flex items-center gap-3 flex-shrink-0">
+                            <label className="flex items-center gap-1.5 text-[11px] sm:text-xs text-on-surface-variant dark:text-gray-400 cursor-pointer select-none group">
+                                <div className="relative flex items-center">
+                                    <input type="checkbox" checked={sortByPrice} onChange={(e) => setSortByPrice(e.target.checked)} className="peer sr-only" />
+                                    <div className="w-4 h-4 rounded border-2 border-outline-variant dark:border-gray-600 bg-surface-container-lowest dark:bg-gray-800 peer-checked:bg-primary peer-checked:border-primary transition-colors flex items-center justify-center">
+                                        {sortByPrice && <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 12 12" fill="none"><path d="M2 6l2.5 2.5L10 3" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                                    </div>
+                                </div>
+                                <span className="group-hover:text-on-surface dark:group-hover:text-gray-200 transition-colors">بهترین قیمت</span>
+                            </label>
+
+                            <label className="flex items-center gap-1.5 text-[11px] sm:text-xs text-on-surface-variant dark:text-gray-400 cursor-pointer select-none group">
+                                <div className="relative flex items-center">
+                                    <input type="checkbox" checked={requireStock} onChange={(e) => setRequireStock(e.target.checked)} className="peer sr-only" />
+                                    <div className="w-4 h-4 rounded border-2 border-outline-variant dark:border-gray-600 bg-surface-container-lowest dark:bg-gray-800 peer-checked:bg-green-600 peer-checked:border-green-600 transition-colors flex items-center justify-center">
+                                        {requireStock && <CheckCircle2 className="w-2.5 h-2.5 text-white" />}
+                                    </div>
+                                </div>
+                                <span className="group-hover:text-on-surface dark:group-hover:text-gray-200 transition-colors">فقط موجودی کافی</span>
+                            </label>
+
+                            <div className=" items-center gap-3 pr-2 border-r border-outline-variant/20 dark:border-gray-700">
+                                <LocationFilter />
                             </div>
-                        ) : hasAds ? (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                                {vitrineData.ads.map((ad: any) => (
-                                    <AdCard key={ad.id} ad={ad} onContact={handleContactClick} onDetail={setSelectedAd} />
-                                ))}
-                            </div>
-                        ) : (
-                            renderEmptyState()
-                        )}
+                        </div>
                     </div>
+                )}
+
+                {!toolbarDescriptionText && <div className="h-3 bg-surface-container-lowest dark:bg-gray-900 border-b border-outline-variant/20 dark:border-gray-800" />}
+            </div>
+
+            {/* محتوای اصلی: تنها بخشی که اسکرول می‌خورد */}
+            <div className="flex-1  pb-16 lg:pb-0">
+                <div className="px-3 lg:px-6 py-6 max-w-8xl mx-auto">
+                    {vitrineLoading ? (
+                        <div className="text-center py-20">
+                            <div className="animate-spin rounded-full h-10 w-10 border-2 border-primary border-t-transparent mx-auto mb-4" />
+                            <p className="text-sm text-on-surface-variant dark:text-gray-400">در حال بارگذاری قیمت‌ها...</p>
+                        </div>
+                    ) : hasAds ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 lg:gap-2">
+                            {vitrineData.ads.map((ad: any) => (
+                                <AdCard key={ad.id} ad={ad} onContact={handleContactClick} onDetail={setSelectedAd} />
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="text-center py-24 px-4">
+                            <div className="w-20 h-20 bg-surface-container-high dark:bg-gray-800 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                                <Package className="w-10 h-10 text-on-surface-variant/30 dark:text-gray-600" />
+                            </div>
+                            <h2 className="text-xl font-bold text-on-surface dark:text-gray-100 mb-3">
+                                {filterParams.categoryId || filterParams.minQuantity ? 'هیچ قیمتی با این فیلترها پیدا نشد' : 'هنوز قیمتی ثبت نشده است'}
+                            </h2>
+                            <p className="text-sm text-on-surface-variant dark:text-gray-400 mb-8 max-w-md mx-auto leading-relaxed">
+                                {filterParams.categoryId || filterParams.minQuantity
+                                    ? 'فیلترهای انتخاب‌شده را تغییر دهید یا از دسته‌بندی‌های دیگر دیدن کنید.'
+                                    : 'اگر فروشنده عمده هستید، همین حالا اولین قیمت خود را ثبت کنید.'}
+                            </p>
+                            <div className="flex items-center justify-center gap-3 flex-wrap">
+                                {(filterParams.categoryId || filterParams.minQuantity) && (
+                                    <button onClick={handleClearAll} className="h-10 px-5 bg-surface-container dark:bg-gray-800 border border-outline-variant dark:border-gray-700 text-on-surface dark:text-gray-200 rounded-lg text-sm font-medium hover:bg-surface-container-high dark:hover:bg-gray-700 transition-colors flex items-center gap-2">
+                                        <RefreshCw className="w-4 h-4" /> پاک کردن فیلترها
+                                    </button>
+                                )}
+                                {isAuthenticated && (
+                                    <button onClick={() => router.push(`/ad/create?arm=${currentSlug}`)} className="h-10 px-5 bg-primary text-on-primary rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors shadow-sm">
+                                        ثبت قیمت جدید
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
 
-            <div className="lg:hidden"><AppFooter activeTab="dashboard" /></div>
-            <a href="tel:09196421264" className="lg:hidden fixed bottom-28 left-4 z-40 bg-green-600 text-white p-3.5 rounded-full shadow-lg shadow-green-600/30 hover:bg-green-700 active:scale-95 transition-all">
-                <Headphones className="w-5 h-5" />
-            </a>
+            {/* فوتر دسکتاپ (در جریان عادی) */}
+            <div className="hidden lg:block flex-shrink-0">
+                <AppFooter />
+            </div>
+
+            {/* فوتر موبایل (fixed) + padding برای جلوگیری از مخفی شدن محتوا */}
+            <div className="lg:hidden">
+                <AppFooter activeTab="dashboard" />
+            </div>
+
             {selectedAd && <AdModal ad={selectedAd} onClose={() => setSelectedAd(null)} onContact={handleContactClick} />}
         </div>
     );

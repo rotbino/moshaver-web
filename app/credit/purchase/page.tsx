@@ -8,7 +8,7 @@ import { RootState } from '@/lib/store/store';
 import { FormHeader } from '@/app/components';
 import { useCreditBalance, usePurchaseCredit } from '@/lib/api/apiHooks';
 import { toast } from 'sonner';
-import { CreditCard, Banknote, Loader2, Shield, Check, Info } from 'lucide-react';
+import { CreditCard, Banknote, Loader2, Shield, Check, Info, Phone } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NumberInput } from "@/components/common";
 import { FileUploader } from '@/components/common/FileUploader';
@@ -31,6 +31,7 @@ export default function PurchaseCreditPage() {
     const [isUploading, setIsUploading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [uploadError, setUploadError] = useState<string | null>(null);
+    const [showSuccess, setShowSuccess] = useState(false);
 
     // ============================================================
     // ✅ خواندن تنظیمات از config بازو
@@ -38,6 +39,7 @@ export default function PurchaseCreditPage() {
     const armConfig = currentArm?.config as any || {};
     const paymentConfig = armConfig.payment || {};
     const economyConfig = armConfig.economy || {};
+    const supportConfig = armConfig.support || {};
 
     const currency = economyConfig.currency || 'IRR';
     const currencySymbol = {
@@ -67,6 +69,10 @@ export default function PurchaseCreditPage() {
         'zarinpal': 'زرین‌پال',
         'rayanpay': 'رایان‌پی',
     };
+
+    // ✅ شماره پشتیبان از تنظیمات بازو
+    const supportPhone = supportConfig.mobile || supportConfig.phone || null;
+    const supportName = supportConfig.name || 'پشتیبانی';
 
     // ✅ تنظیم پیش‌فرض روش پرداخت و درگاه
     useEffect(() => {
@@ -155,12 +161,15 @@ export default function PurchaseCreditPage() {
 
             // ✅ اگر پرداخت آنلاین و آدرس پرداخت وجود داشت، هدایت کن
             if (paymentMethod === 'online' && result.payment_url) {
-                debugger
                 window.location.href = result.payment_url;
             } else {
-                toast.success('درخواست خرید ثبت شد');
+                // ✅ نمایش پیام موفقیت و هدایت به صفحه تراکنش‌ها
+                setShowSuccess(true);
+                toast.success('فیش شما ارسال شد. پس از تایید مدیر، اعتبار شما افزایش می‌یابد.');
                 await refetchBalance();
-                router.push('/profile');
+                setTimeout(() => {
+                    router.push('/credit/transactions');
+                }, 2000);
             }
         } catch (error: any) {
             console.error('Purchase error:', error);
@@ -169,6 +178,32 @@ export default function PurchaseCreditPage() {
             setIsSubmitting(false);
         }
     };
+
+    // اگر پیام موفقیت نشان داده شود
+    if (showSuccess) {
+        return (
+            <div className="min-h-screen flex flex-col bg-surface">
+                <FormHeader title="خرید اعتبار" backUrl="/" />
+                <main className="flex-1 flex items-center justify-center px-4">
+                    <div className="text-center space-y-4 max-w-sm w-full">
+                        <div className="w-20 h-20 mx-auto rounded-full bg-green-50 border-2 border-green-200 flex items-center justify-center">
+                            <Check className="w-10 h-10 text-green-500" />
+                        </div>
+                        <h2 className="text-xl font-extrabold text-green-700">فیش شما ارسال شد</h2>
+                        <p className="text-sm text-on-surface-variant">
+                            پس از تایید توسط مدیر بازار، اعتبار شما به کیف پول اضافه می‌شود.
+                        </p>
+                        <p className="text-xs text-on-surface-variant/60">
+                            در حال انتقال به صفحه پرداخت‌ها...
+                        </p>
+                        <div className="w-full h-1 bg-gray-200 rounded-full overflow-hidden mt-2">
+                            <div className="h-full bg-primary rounded-full animate-[progress_2s_ease-in-out] w-0" />
+                        </div>
+                    </div>
+                </main>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen flex flex-col bg-surface pb-24">
@@ -264,7 +299,6 @@ export default function PurchaseCreditPage() {
                                     </button>
 
                                     {/* ✅ انتخاب درگاه (اگر بیش از یک درگاه فعال باشد) */}
-                                    {/* انتخاب درگاه پرداخت آنلاین */}
                                     {paymentMethod === 'online' && enabledGateways.length > 0 && (
                                         <div className="space-y-3">
                                             <label className="text-sm font-semibold text-on-surface block">
@@ -317,8 +351,8 @@ export default function PurchaseCreditPage() {
                                                                 "text-sm font-medium",
                                                                 isSelected ? "text-primary" : "text-on-surface"
                                                             )}>
-                            {info.label}
-                        </span>
+                                                                {info.label}
+                                                            </span>
                                                             {isSelected && (
                                                                 <span className="text-[10px] text-primary mt-0.5">✓ انتخاب شده</span>
                                                             )}
@@ -370,45 +404,49 @@ export default function PurchaseCreditPage() {
                         )}
                     </div>
 
-                    {/* اطلاعات کارت به کارت */}
+                    {/* اطلاعات کارت به کارت (جمع‌وجور شده) */}
                     {paymentMethod === 'manual' && manualAvailable && (
-                        <div id="manual-payment-section"  className="bg-warning/5 border border-warning/20 p-4 rounded-xl space-y-3">
-                            <div className="flex items-center gap-2 text-warning">
+                        <div id="manual-payment-section" className="bg-amber-50/80 border border-amber-200/60 rounded-xl p-4 space-y-3">
+                            <div className="flex items-center gap-2 text-amber-700">
                                 <Shield className="w-4 h-4" />
                                 <span className="text-sm font-medium">اطلاعات واریز</span>
                             </div>
 
-                            {paymentConfig.manual?.cardNumber && (
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-on-surface-variant">شماره کارت</span>
-                                    <span className="font-mono font-bold">{paymentConfig.manual.cardNumber}</span>
-                                </div>
-                            )}
-                            {paymentConfig.manual?.accountOwner && (
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-on-surface-variant">نام صاحب حساب</span>
-                                    <span className="font-bold">{paymentConfig.manual.accountOwner}</span>
-                                </div>
-                            )}
-                            {paymentConfig.manual?.bankName && (
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-on-surface-variant">بانک</span>
-                                    <span className="font-bold">{paymentConfig.manual.bankName}</span>
-                                </div>
-                            )}
-                            {paymentConfig.manual?.shebaNumber && (
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-on-surface-variant">شماره شبا</span>
-                                    <span className="font-mono font-bold">{paymentConfig.manual.shebaNumber}</span>
-                                </div>
-                            )}
+                            {/* اطلاعات بانکی با grid دو ستونه */}
+                            <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-sm">
+                                {paymentConfig.manual?.cardNumber && (
+                                    <>
+                                        <span className="text-on-surface-variant text-xs">شماره کارت</span>
+                                        <span className="font-mono font-bold text-left" dir="ltr">{paymentConfig.manual.cardNumber}</span>
+                                    </>
+                                )}
+                                {paymentConfig.manual?.accountOwner && (
+                                    <>
+                                        <span className="text-on-surface-variant text-xs">نام صاحب حساب</span>
+                                        <span className="font-bold text-left">{paymentConfig.manual.accountOwner}</span>
+                                    </>
+                                )}
+                                {paymentConfig.manual?.bankName && (
+                                    <>
+                                        <span className="text-on-surface-variant text-xs">بانک</span>
+                                        <span className="font-bold text-left">{paymentConfig.manual.bankName}</span>
+                                    </>
+                                )}
+                                {paymentConfig.manual?.shebaNumber && (
+                                    <>
+                                        <span className="text-on-surface-variant text-xs">شماره شبا</span>
+                                        <span className="font-mono font-bold text-left" dir="ltr">{paymentConfig.manual.shebaNumber}</span>
+                                    </>
+                                )}
+                            </div>
+
                             {paymentConfig.manual?.instructions && (
-                                <p className="text-xs text-on-surface-variant bg-white/50 p-2 rounded-lg">
+                                <p className="text-xs text-amber-800/70 bg-white/50 p-2 rounded-lg text-right">
                                     {paymentConfig.manual.instructions}
                                 </p>
                             )}
 
-                            <div className="border-t border-warning/20 pt-3">
+                            <div className="border-t border-amber-200/40 pt-3">
                                 <label className="text-sm font-medium text-on-surface block mb-2">
                                     تصویر رسید
                                 </label>
@@ -429,8 +467,8 @@ export default function PurchaseCreditPage() {
                                         toast.error(error);
                                     }}
                                     rounded={false}
-                                    width={300}
-                                    height={400}
+                                    width={200}
+                                    height={120}
                                     disabled={isUploading || isSubmitting}
                                     label="آپلود رسید"
                                     error={uploadError || undefined}
@@ -442,14 +480,14 @@ export default function PurchaseCreditPage() {
                                 {receiptFileId && !isUploading && (
                                     <p className="text-xs text-green-600 mt-1">✅ تصویر رسید آپلود شد</p>
                                 )}
-                                <p className="text-[10px] text-on-surface-variant mt-1">
+                                <p className="text-[10px] text-on-surface-variant/60 mt-1">
                                     * لطفاً تصویر رسید واریز را آپلود کنید تا درخواست شما تأیید شود
                                 </p>
                             </div>
                         </div>
                     )}
 
-                    {/* دکمه پرداخت */}
+                    {/* دکمه پرداخت با عنوان پویا */}
                     <button
                         type="submit"
                         disabled={isSubmitting || isUploading || (!onlineAvailable && !manualAvailable) || (paymentMethod === 'manual' && !receiptFileId)}
@@ -459,13 +497,48 @@ export default function PurchaseCreditPage() {
                             <Loader2 className="w-5 h-5 animate-spin" />
                         ) : (
                             <>
-                                خرید {creditCount} اعتبار
-                                <span className="text-sm font-normal opacity-80">
-                                    ({totalAmount.toLocaleString()} {currencySymbol})
-                                </span>
+                                {paymentMethod === 'manual' ? (
+                                    <>
+                                        ارسال فیش واریز
+                                        <span className="text-sm font-normal opacity-80">
+                                            ({totalAmount.toLocaleString()} {currencySymbol})
+                                        </span>
+                                    </>
+                                ) : (
+                                    <>
+                                        خرید {creditCount} اعتبار
+                                        <span className="text-sm font-normal opacity-80">
+                                            ({totalAmount.toLocaleString()} {currencySymbol})
+                                        </span>
+                                    </>
+                                )}
                             </>
                         )}
                     </button>
+
+                    {/* راهنمای تکمیلی برای روش کارت به کارت */}
+                    {paymentMethod === 'manual' && (
+                        <div className="text-center text-xs text-amber-700/70 bg-amber-50/50 border border-amber-200/30 rounded-xl p-3">
+                            <p>پس از ارسال فیش، مدیر بازار آن را بررسی کرده و در اسرع وقت اعتبار شما را افزایش می‌دهد.</p>
+                        </div>
+                    )}
+
+                    {/* دکمه تماس با پشتیبان */}
+                    {supportPhone && (
+                        <div className="flex justify-center mt-2">
+                            <button
+                                type="button"
+                                onClick={() => window.location.href = `tel:${supportPhone}`}
+                                className="flex items-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors"
+                            >
+                                <Phone className="w-4 h-4" />
+                                <span>
+                                    {supportName && `${supportName} - `}
+                                    سوال در مورد پرداخت و اعتبار؟ با پشتیبان تماس بگیرید
+                                </span>
+                            </button>
+                        </div>
+                    )}
 
                     <div className="text-center text-xs text-on-surface-variant/60 space-y-1">
                         <p>پس از پرداخت، اعتبار به کیف پول شما اضافه می‌شود</p>
@@ -473,6 +546,14 @@ export default function PurchaseCreditPage() {
                     </div>
                 </form>
             </main>
+
+            {/* انیمیشن پیشرفت مخفی برای صفحه موفقیت */}
+            <style jsx>{`
+                @keyframes progress {
+                    0% { width: 0%; }
+                    100% { width: 100%; }
+                }
+            `}</style>
         </div>
     );
 }

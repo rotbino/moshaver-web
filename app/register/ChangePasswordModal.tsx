@@ -38,14 +38,18 @@ export function ChangePasswordModal({ isOpen, onClose, onSuccess }: ChangePasswo
         return Object.keys(newErrors).length === 0;
     };
 
+// components/common/ChangePasswordModal.tsx
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!validate()) return;
 
         setIsLoading(true);
         try {
-            // TODO: فراخوانی API تغییر رمز
-            // await apiService.user.changePassword(newPassword);
+            await apiService.auth.changePassword({
+                currentPassword: '123456',   // ← رمز عبور پیش‌فرض موقت
+                newPassword: newPassword,
+            });
             toast.success('رمز عبور با موفقیت تغییر یافت');
             onSuccess?.();
             onClose();
@@ -54,7 +58,7 @@ export function ChangePasswordModal({ isOpen, onClose, onSuccess }: ChangePasswo
         } finally {
             setIsLoading(false);
         }
-    };
+    };;
 
     return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">

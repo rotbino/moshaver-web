@@ -9,6 +9,7 @@ interface NumberInputProps {
     placeholder?: string;
     disabled?: boolean;
     textAlign?: 'left' | 'center' | 'right';
+    unitClassName?: string
 }
 
 export const NumberInput: React.FC<NumberInputProps> = ({
@@ -19,6 +20,7 @@ export const NumberInput: React.FC<NumberInputProps> = ({
                                                             placeholder,
                                                             disabled = false,
                                                             textAlign = 'center',
+                                                            unitClassName,
                                                             ...rest
                                                         }) => {
     // ✅ تبدیل عدد به فارسی با فرمت سه رقمی
@@ -63,7 +65,7 @@ export const NumberInput: React.FC<NumberInputProps> = ({
                 className={`w-full bg-surface-container-lowest border border-outline px-3 py-2  focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all rounded-lg ${textAlignClass} ${className}`}
             />
             {unit && (
-                <span className="absolute top-1/2 left-3 -translate-y-1/2 text-on-surface-variant text-sm pointer-events-none font-iransans">
+                <span className={`absolute top-1/2 left-3 -translate-y-1/2 text-on-surface-variant  pointer-events-none  ${unitClassName}`}>
                     {unit}
                 </span>
             )}

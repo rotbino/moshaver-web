@@ -21,7 +21,7 @@ interface RefreshModalProps {
 }
 
 export function RefreshModal({ isOpen, onClose, ad, onSuccess }: RefreshModalProps) {
-    const [validityDays, setValidityDays] = useState('1');
+    const [validityHours, setValidityHours] = useState('1');
     const [isBumped, setIsBumped] = useState(false);
 
     const extendAdMutation = useExtendAd();
@@ -34,7 +34,7 @@ export function RefreshModal({ isOpen, onClose, ad, onSuccess }: RefreshModalPro
             // تمدید آگهی با همان قیمت
             await extendAdMutation.mutateAsync({
                 id: ad.id,
-                validityDays: parseInt(validityDays),
+                validityHours: parseInt(validityHours),
             });
 
             // اگر نردبان هم فعال بود
@@ -89,8 +89,8 @@ export function RefreshModal({ isOpen, onClose, ad, onSuccess }: RefreshModalPro
                         <div className="flex flex-col gap-1">
                             <label className="font-label-md text-on-surface-variant">مدت اعتبار</label>
                             <select
-                                value={validityDays}
-                                onChange={(e) => setValidityDays(e.target.value)}
+                                value={validityHours}
+                                onChange={(e) => setValidityHours(e.target.value)}
                                 className="w-full h-11 border border-outline bg-transparent font-body-md px-2 focus:ring-primary"
                             >
                                 <option value="1">۱ روز</option>

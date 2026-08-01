@@ -99,7 +99,7 @@ function VerifyPaymentContent() {
     if (status === 'loading') {
         return (
             <div className="min-h-screen flex flex-col bg-surface dark:bg-gray-950">
-                <AppHeader showBackButton backUrl="/" />
+                <AppHeader showBack={true} backUrl="/" />
                 <main className="flex-1 flex items-center justify-center px-4">
                     <div className="text-center">
                         <div className="w-20 h-20 rounded-full bg-primary/10 dark:bg-primary/20 flex items-center justify-center mx-auto mb-6 animate-pulse">
@@ -119,7 +119,7 @@ function VerifyPaymentContent() {
 
         return (
             <div className="min-h-screen flex flex-col bg-surface dark:bg-gray-950">
-                <AppHeader showBackButton backUrl="/" />
+                <AppHeader showBack={true} backUrl="/" />
                 <main className="flex-1 flex items-center justify-center px-4 py-8">
                     <div className="w-full max-w-lg">
                         {/* کارت موفقیت */}
@@ -141,7 +141,7 @@ function VerifyPaymentContent() {
                                     <CheckCircle className="w-10 h-10 text-emerald-500" />
                                 </div>
                                 <h2 className="text-lg font-bold text-on-surface dark:text-gray-100">پرداخت با موفقیت انجام شد! 🎉</h2>
-                                <p className="text-sm text-on-surface-variant dark:text-gray-400 mt-1">اعتبار به کیف پول شما اضافه شد</p>
+                                <p className="text-sm text-on-surface-variant dark:text-gray-400 mt-1">اعتبار به پنل شما اضافه شد</p>
                             </div>
 
                             {/* کارت اعتبار */}
@@ -223,7 +223,7 @@ function VerifyPaymentContent() {
     // ⭐ ناموفق
     return (
         <div className="min-h-screen flex flex-col bg-surface dark:bg-gray-950">
-            <AppHeader showBackButton backUrl="/" />
+            <AppHeader showBack={true} backUrl="/" />
             <main className="flex-1 flex items-center justify-center px-4 py-8">
                 <div className="w-full max-w-md">
                     <div className="bg-white dark:bg-gray-900 rounded-2xl border border-outline-variant/20 dark:border-gray-800 shadow-lg p-6 sm:p-8 text-center">

@@ -119,9 +119,40 @@ export default function CategoryFilter({
     const breadcrumb = path;
 
     return (
-        <div className="w-full">
+        <div className="w-full py-2 pt-3 shadow-md bg-white dark:bg-gray-900 backdrop-blur border-b border-outline-variant/10">
+            {/* Breadcrumb */}
+            {breadcrumb.length > 0 && (
+                <div className="flex items-center pt-0 pb-3 px-3">
+                    <div className="flex flex-1 items-center gap-1 text-xs text-on-surface-variant overflow-x-auto scrollbar-hide">
+                        <button
+                            onClick={selectAll}
+                            className="hover:text-primary transition-colors whitespace-nowrap"
+                        >
+                            همه
+                        </button>
+                        {breadcrumb.map((node, idx) => {
+                            const isLast = idx === breadcrumb.length - 1;
+                            return (
+                                <React.Fragment key={node.id}>
+                                    <ChevronLeft className="w-3 h-3 flex-shrink-0" />
+                                    {isLast ? (
+                                        <span className="text-on-surface font-medium whitespace-nowrap">{node.title}</span>
+                                    ) : (
+                                        <button
+                                            onClick={() => handleBreadcrumbClick(idx)}
+                                            className="hover:text-primary transition-colors whitespace-nowrap"
+                                        >
+                                            {node.title}
+                                        </button>
+                                    )}
+                                </React.Fragment>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
             {/* نوار افقی دسته‌بندی‌ها */}
-            <div className="bg-white dark:bg-gray-900 backdrop-blur border-b border-outline-variant/10 rounded-md py-2 pt-6 shadow-md">
+            <div className="">
                 <div className="flex ">
                     {/* دکمه بازگشت */}
                     {path.length > 0 && (
@@ -210,37 +241,7 @@ export default function CategoryFilter({
                 </div>
             </div>
 
-            {/* Breadcrumb */}
-            {breadcrumb.length > 0 && (
-                <div className="flex items-center pt-4 pb-4 px-3">
-                    <div className="flex flex-1 items-center gap-1 text-xs text-on-surface-variant overflow-x-auto scrollbar-hide">
-                        <button
-                            onClick={selectAll}
-                            className="hover:text-primary transition-colors whitespace-nowrap"
-                        >
-                            همه
-                        </button>
-                        {breadcrumb.map((node, idx) => {
-                            const isLast = idx === breadcrumb.length - 1;
-                            return (
-                                <React.Fragment key={node.id}>
-                                    <ChevronLeft className="w-3 h-3 flex-shrink-0" />
-                                    {isLast ? (
-                                        <span className="text-on-surface font-medium whitespace-nowrap">{node.title}</span>
-                                    ) : (
-                                        <button
-                                            onClick={() => handleBreadcrumbClick(idx)}
-                                            className="hover:text-primary transition-colors whitespace-nowrap"
-                                        >
-                                            {node.title}
-                                        </button>
-                                    )}
-                                </React.Fragment>
-                            );
-                        })}
-                    </div>
-                </div>
-            )}
+
         </div>
     );
 }

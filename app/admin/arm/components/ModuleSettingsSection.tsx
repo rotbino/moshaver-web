@@ -27,7 +27,7 @@ const moduleConfigs: Record<string, { title: string; icon: any; rules: any[] }> 
             { key: 'allowAnonymousPublishing', label: 'انتشار ناشناس آگهی', hint: 'فروشنده بدون نمایش نام کسب‌وکار آگهی دهد', icon: Shield },
             { key: 'autoApproveAds', label: 'تأیید خودکار آگهی‌ها', hint: 'آگهی بدون بررسی مدیر منتشر شود', icon: Check },
             { key: 'maxFreeAdsPerMonth', label: 'سهمیه آگهی رایگان', icon: Star, isNumber: true, min: 0, max: 1000, suffix: 'عدد' },
-            { key: 'adValidityDefaultDays', label: 'اعتبار پیش‌فرض آگهی', icon: Clock, isNumber: true, min: 1, max: 365, suffix: 'روز' },
+            { key: 'adValidityDefaultHours', label: 'اعتبار پیش‌فرض آگهی', icon: Clock, isNumber: true, min: 1, max: 240, suffix: 'ساعت' },
             { key: 'maxActiveAdsPerUser', label: 'حداکثر آگهی فعال', icon: Package, isNumber: true, min: 0, max: 100, suffix: 'عدد' },
             { key: 'bumpCost', label: 'هزینه نردبان', icon: TrendingUp, isNumber: true, min: 0, max: 10000, suffix: 'اعتبار' },
         ],

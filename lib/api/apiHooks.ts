@@ -235,8 +235,8 @@ export const useAd = (id: string) => {
 export const useExtendAd = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: ({ id, validityDays }: { id: string; validityDays: number }) =>
-            apiService.ad.extend(id, validityDays),
+        mutationFn: ({ id, validityHours }: { id: string; validityHours: number }) =>
+            apiService.ad.extend(id, validityHours),
         onSuccess: (_, { id }) => {
             queryClient.invalidateQueries({ queryKey: ['ad', id] });
             queryClient.invalidateQueries({ queryKey: ['ads'] });
@@ -293,6 +293,27 @@ export const useBumpAd = () => {
     });
 };
 
+// lib/api/apiHooks.ts
+export const useBulkUpdateAd = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (data: { updates: { id: string; unitPrice: number }[] }) =>
+            apiService.ad.bulkUpdate(data),
+        onSuccess: (_, variables) => {
+            // حذف کش آگهی‌های تغییر کرده
+            variables.updates.forEach(u => {
+                queryClient.invalidateQueries({ queryKey: ['ad', u.id] });
+            });
+            // حذف کش کسب‌وکار فعال (که شامل لیست آگهی‌هاست)
+            queryClient.invalidateQueries({ queryKey: ['business', 'active'] });
+            // حذف کش هر کسب‌وکاری که ممکن است این آگهی‌ها را داشته باشد
+            queryClient.invalidateQueries({ queryKey: ['businesses'] });
+            // اگر businessId خاصی مشخص باشد، می‌توانیم آن را هم invalidate کنیم
+            toast.success('قیمت‌ها با موفقیت به‌روز شدند');
+        },
+        onError: (error: ApiError) => toast.error(error.message || 'خطا در به‌روزرسانی'),
+    });
+};
 // ============================================================
 // CREDIT HOOKS
 // ============================================================

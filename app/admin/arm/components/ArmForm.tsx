@@ -63,7 +63,7 @@ export function ArmForm({ initialData, onSubmit, isSubmitting = false, isEditMod
                         allowAnonymousPublishing: true,
                         autoApproveAds: true,
                         maxFreeAdsPerMonth: 5,
-                        adValidityDefaultDays: 7,
+                        adValidityDefaultHours: 7,
                         maxActiveAdsPerUser: 10,
                         bumpCost: 10,
                     },

@@ -4,7 +4,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter, usePathname, useParams } from 'next/navigation';
 import { useSelector } from 'react-redux';
-import { MapPin, ChevronDown, Headphones, ArrowLeft, X } from 'lucide-react';
+import {ArrowLeft, ArrowRight, Headphones} from 'lucide-react';
 import { RootState } from '@/lib/store/store';
 import { useArms } from '@/lib/api/apiHooks';
 import { toast } from 'sonner';
@@ -17,9 +17,10 @@ import { useFilters } from '@/lib/hooks/useFilters';
 interface MobileHeaderProps {
     showLocation?: boolean;
     fixed?: boolean;
+    showBack?:boolean
 }
 
-export default function MobileHeader({ showLocation = false, fixed }: MobileHeaderProps) {
+export default function MobileHeader({ showLocation = false,showBack=true, fixed = true }: MobileHeaderProps) {
     const router = useRouter();
     const pathname = usePathname();
     const params = useParams();
@@ -69,64 +70,47 @@ export default function MobileHeader({ showLocation = false, fixed }: MobileHead
     const armSlogan = currentArm?.slogan || 'قیمت امروز فروشندگان عمده مصالح';
 
     const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, '') || 'http://localhost:3011';
-    const logoFileId = (currentArm as any)?.config?.general?.logoFileId || currentArm?.logoFileId;
+    const logoFileId = (currentArm as any)?.config?.general?.logoFileId || currentArm?.logoUrl; // ✅ اصلاح شد
     const logoUrl = (currentArm as any)?.config?.general?.logoUrl || currentArm?.logoUrl;
     const logoSrc = logoFileId ? `${API_BASE}/file/${logoFileId}` : logoUrl || '/images/logo.png';
 
-    const locationLabel = (() => {
-        if (location.cityId) return location.cityLabel;
-        if (location.provinceId) return `استان ${location.provinceLabel}`;
-        return null;
-    })();
-
     const showJoin = isHomePage && (!isAuthenticated || !isMember) && !armsLoading;
-    const showBack = !isHomePage;
+
 
     return (
-        <>
-            <header className="fixed top-0 left-0 right-0 z-40 bg-white dark:bg-gray-900">
-                <div className="flex items-center justify-between px-4 h-16">
-                    <div className="flex items-center gap-2">
-                        {showBack && (
-                            <button onClick={() => router.back()} className="p-1.5 -ml-1.5">
-                                <ArrowLeft className="w-5 h-5 text-on-surface-variant" />
-                            </button>
-                        )}
-                        <div className="w-10 h-10 cursor-pointer relative rounded-md overflow-hidden flex-shrink-0" onClick={() => router.push('/')}>
-                            <Image src={logoSrc} alt="Logo" fill className="object-contain" unoptimized={logoSrc.startsWith('http')} sizes="40px" />
-                        </div>
-                        <div className="flex flex-col text-right">
-                            <div className="flex items-center gap-2">
-                                <button onClick={() => router.push('/')} className="font-bold text-on-surface text-sm leading-tight">
-                                    {armName}
-                                </button>
-                                {showJoin && (
-                                    <button onClick={handleJoinClick} className="bg-primary hover:bg-primary/90 text-on-primary px-2.5 py-0.5 rounded-md text-[10px] font-medium" disabled={isJoining}>
-                                        {isJoining ? '...' : 'عضویت'}
-                                    </button>
-                                )}
-                            </div>
-                            <span className="text-on-surface-variant text-[10px] leading-tight mt-0.5">{armSlogan}</span>
-                        </div>
+        <header className=" z-40 bg-white ">
+            <div className="flex items-center justify-between px-4 h-16">
+                <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                    {showBack && (
+                        <button onClick={() => router.back()} className="p-1.5 -ml-1">
+                            <ArrowRight className="w-5 h-5 text-gray-500" />
+                        </button>
+                    )}
+                    <div className="w-9 h-9 cursor-pointer relative rounded-lg overflow-hidden flex-shrink-0" onClick={() => router.push('/')}>
+                        <Image src={logoSrc} alt="Logo" fill className="object-contain" unoptimized={logoSrc.startsWith('http')} sizes="36px" />
                     </div>
-
-                    <div className="flex items-center gap-1">
-                        {!showLocation? (
-                            <LocationFilter />
-                        ):(
-                            <>
-                                <ThemeToggle />
-                                <button onClick={handleSupportClick} className="p-2 text-on-surface-variant">
-                                    <Headphones className="w-5 h-5" />
+                    <div className="flex flex-col text-right min-w-0">
+                        <div className="flex items-center gap-2">
+                            <button onClick={() => router.push('/')} className="font-bold text-gray-900 dark:text-gray-100 text-[13px] leading-tight truncate">
+                                {armName}
+                            </button>
+                            {showJoin && (
+                                <button onClick={handleJoinClick} className="bg-red-600 text-white px-2 py-0.5 rounded text-[9px] font-bold disabled:opacity-50">
+                                    {isJoining ? '...' : 'عضویت'}
                                 </button>
-                            </>
-                        )}
-
+                            )}
+                        </div>
+                        <span className="text-gray-400 dark:text-gray-500 text-[9px] leading-tight truncate">{armSlogan}</span>
                     </div>
                 </div>
-            </header>
 
-
-        </>
+                <div className="flex items-center gap-1">
+                    {!showLocation && <ThemeToggle />}
+                    <button onClick={handleSupportClick} className="p-2 text-gray-400 hover:text-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
+                        <Headphones className="w-5 h-5" />
+                    </button>
+                </div>
+            </div>
+        </header>
     );
 }

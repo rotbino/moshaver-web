@@ -26,6 +26,7 @@ const PUBLIC_PATHS = [
     '/purchase',
     '/credit/purchase',
     '/credit/verify',
+    '/feedback',
 ];
 
 interface ArmProviderProps {

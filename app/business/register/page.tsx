@@ -48,12 +48,12 @@ export default function RegisterBusinessPage() {
 
     const shouldShowIndustrySelector = restrictMembershipByIndustry && selectedRole;
 
-    useEffect(() => {
+  /*  useEffect(() => {
         if (activeBusiness && !isLoadingBusiness) {
             router.push('/profile');
         }
     }, [activeBusiness, isLoadingBusiness, router]);
-
+*/
     const validate = () => {
         const newErrors: Record<string, string> = {};
         if (!formData.name.trim()) newErrors.name = 'نام کسب‌وکار الزامی است';
@@ -95,7 +95,7 @@ export default function RegisterBusinessPage() {
 
     return (
         <div className="min-h-screen flex flex-col bg-surface dark:bg-gray-950">
-            <FormHeader title="ثبت کسب و کار" subtitle="اطلاعات خود را وارد کنید" backUrl="/profile" />
+            <FormHeader title="ثبت کسب و کار جدید" subtitle="اطلاعات خود را وارد کنید" backUrl="/profile" />
 
             <main className="flex-1 w-full max-w-lg mx-auto px-4 pt-20 pb-28">
                 {/* ⭐ کارت فقط برای دسکتاپ */}

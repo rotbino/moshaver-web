@@ -107,7 +107,7 @@ export function LocationFilter() {
         if (location.cityId) return location.cityLabel;
         if (location.provinceId) return `استان ${location.provinceLabel}`;
         if (hasSingleProvinceMultipleCities) return singleProvince!.label;
-        return 'محدوده';
+        return 'بارگیری';
     };
 
     const getButtonIcon = () => {
@@ -149,7 +149,7 @@ export function LocationFilter() {
                                     </button>
                                 )}
                                 <h3 className="font-bold text-sm text-on-surface">
-                                    {step === 'cities' ? `شهرهای ${currentProvinceLabel}` : 'انتخاب محدوده'}
+                                    {step === 'cities' ? `شهرهای ${currentProvinceLabel}` : 'محل بارگیری'}
                                 </h3>
                             </div>
                             <button onClick={() => setShowModal(false)} className="p-1 hover:bg-surface-container rounded-md transition-colors">
