@@ -3,9 +3,10 @@
 import React from 'react';
 import Image from 'next/image';
 import {
-    Clock, MapPin, Package, TrendingUp, BadgeCheck, Layers,
+    Clock, MapPin, Star, Verified, Lock,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {useRouter} from "next/navigation";
 
 interface AdCardProps {
     ad: any;
@@ -17,20 +18,33 @@ function formatNum(n: number | undefined) {
     return n?.toLocaleString('fa-IR') ?? '—';
 }
 
-export default function AdCard({ ad, onDetail }: AdCardProps) {
+function getRelativeTime(date: string) {
+    const now = new Date();
+    const then = new Date(date);
+    const diffMs = now.getTime() - then.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) return 'امروز';
+    if (diffDays === 1) return 'دیروز';
+    if (diffDays === 2) return '۲ روز';
+    if (diffDays <= 7) return `${diffDays} روز`;
+    return `${diffDays} روز`;
+}
+
+export default function AdCard({ ad, onContact, onDetail }: AdCardProps) {
     const unit = ad.unit?.shortCode || 'تن';
     const payment = ad.customFields?.paymentMethods;
     const hasCheque = payment?.cheque?.enabled;
     const hasInstallment = payment?.installment?.enabled;
     const tier = ad.business?.verificationTier;
-    const hoursLeft = Math.ceil(
-        (new Date(ad.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60),
-    );
-    const isUrgent = hoursLeft > 0 && hoursLeft <= 12;
+    const router = useRouter();
 
     const adImage = ad.files?.find((f: any) => f.fieldKey?.startsWith('ad-image'));
-    const imageUrl = adImage
+    const thumbnailImageUrl = adImage
         ? `${process.env.NEXT_PUBLIC_API_BASE_URL}/file/${adImage.id}/thumbnail`
+        : '/images/no_product_image.jpg';
+    const imageUrl = adImage
+        ? `${process.env.NEXT_PUBLIC_API_BASE_URL}/file/${adImage.id}`
         : '/images/no_product_image.jpg';
 
     const tierColor =
@@ -38,163 +52,190 @@ export default function AdCard({ ad, onDetail }: AdCardProps) {
             tier === 'silver' ? 'text-gray-400 dark:text-gray-300' :
                 tier === 'blue' ? 'text-blue-500 dark:text-blue-400' : '';
 
-    return (
-        <div
-            onClick={() => onDetail(ad)}
-            className={cn(
-                'relative overflow-hidden rounded-xl cursor-pointer group',
-                'bg-white dark:bg-gray-900',
-                'border border-outline-variant/15 dark:border-gray-800/80',
-                'hover:shadow-md hover:border-primary/20 dark:hover:border-primary/25',
-                'active:scale-[0.99] transition-all duration-200',
-            )}
-        >
-            {/* بج نردبان */}
-            {ad.isBumped && (
-                <div className="absolute top-2 right-2 z-20 flex items-center gap-0.5 bg-gradient-to-l from-orange-500 to-rose-500 text-white text-[9px] font-extrabold px-1.5 py-[3px] rounded-md shadow-lg">
-                    <TrendingUp className="w-2.5 h-2.5" />
-                    نردبان
-                </div>
-            )}
+    const relativeTime = getRelativeTime(ad.updatedAt || ad.createdAt);
 
-            {/* ═══ موبایل: افقی ═══ */}
-            <div className="flex lg:hidden items-center gap-4 p-4">
-                <div className="relative w-[76px] h-[76px] rounded-xl overflow-hidden bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800 flex-shrink-0">
-                    <Image
-                        src={imageUrl}
-                        alt={ad.productType || ad.title}
-                        fill
-                        className="object-contain p-1.5"
-                        sizes="76px"
-                        unoptimized
-                    />
-                </div>
-
-                <div className="flex-1 min-w-0 flex flex-col justify-center gap-[5px]">
-                    <div className="flex items-center gap-1 min-w-0">
-                        <h3 className="font-bold text-[13px] text-gray-900 dark:text-white truncate leading-tight">
-                            {ad.productType || ad.title}
-                        </h3>
-                        {tier && tier !== 'none' && (
-                            <BadgeCheck className={cn("w-3.5 h-3.5 shrink-0 -mt-px", tierColor)} strokeWidth={2.5} />
-                        )}
+    // ─── طرح موبایل (مطابق با طرح مرجع) ───
+    const MobileLayout = () => (
+        <div className="flex p-1 flex-row-reverse w-full bg-surface rounded-lg border border-gray-400 overflow-hidden premium-card-shadow transition-all duration-300 relative group">
+            {/* تصویر */}
+            <div className="w-24 h-28 sm:w-40 sm:h-40 flex-shrink-0 overflow-hidden bg-surface-container relative">
+                {ad.isBumped && (
+                    <div className="absolute  top-2 p-1 right-2 flex justify-center   gap-1 bg-error   rounded-full">
+                        <Star className="w-3 h-3   text-white" />
                     </div>
+                )}
+                <Image
+                    src={imageUrl}
+                    alt={ad.productType || ad.title}
+                    width={100}
+                    height={100}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    unoptimized
+                />
+                {/* اوورلای موقعیت */}
+                <div className="absolute bottom-0 left-0 right-0 bg-black/40 text-white p-1 flex items-center gap-1">
+                    <MapPin className="w-3 h-3 text-white" />
+                    <span className="text-[10px] font-body-md truncate">{ad.city || 'نامشخص'}</span>
+                </div>
+            </div>
 
-                    <div className="flex items-center gap-1.5 text-[11px] text-gray-500 dark:text-gray-400 min-w-0">
-                        <span className="truncate">{ad.business?.name || '—'}</span>
-                        {ad.city && (
+            {/* محتوا */}
+            <div className="p-2 flex-1 flex flex-col justify-between min-w-0">
+                <div className="flex flex-col gap-0.5">
+                    <h2 className="font-title-lg text-[15px] text-on-surface font-bold leading-tight line-clamp-2">
+                        {ad.productType || ad.title}
+                    </h2>
+                    <div className="flex items-center gap-1">
+                        {ad.isAnonymous ? (
+                            <span className="flex items-center gap-1 text-[10px] text-gray-500 dark:text-gray-400 font-medium">
+                                <Lock className="w-3 h-3" />
+                                انتشار ناشناس (فقط تماس)
+                            </span>
+                        ) : (
                             <>
-                                <span className="text-gray-200 dark:text-gray-700 shrink-0">·</span>
-                                <MapPin className="w-3 h-3 shrink-0 text-primary/60" />
-                                <span className="shrink-0">{ad.city}</span>
+                                <span className="font-label-md text-[11px] text-primary font-bold">
+                                    {ad.business?.name || 'فروشنده'}
+                                </span>
+                                {tier && tier !== 'none' && (
+                                    <Verified className={cn("w-4 h-4 ", tierColor)} />
+                                )}
                             </>
                         )}
                     </div>
+                </div>
 
-                    <div className="flex items-baseline gap-1">
-                        <span className="text-[18px] font-extrabold tracking-tight text-gray-900 dark:text-white leading-none">
-                            {formatNum(ad.unitPrice)}
-                        </span>
-                        <span className="text-[10px] text-gray-400 dark:text-gray-500 leading-none">
-                            تومان/{unit}
+                <div className="flex justify-between items-center border-t border-outline-variant/30 pt-0.5 mt-0.5">
+                    <div className="flex items-center gap-0.5">
+                        <span className="text-on-surface-variant text-[9px] font-label-md">حداقل خرید:</span>
+                        <span className="text-on-surface text-[9px] font-bold">{formatNum(ad.minQuantity)} {unit}</span>
+                    </div>
+                    <div className="flex items-center gap-0.5">
+                        <span className="text-on-surface-variant text-[9px] font-label-md">موجودی:</span>
+                        <span className="text-on-surface text-[9px] font-bold">
+                            {ad.availableQuantity ? `${formatNum(ad.availableQuantity)} ` : 'موجود'}
                         </span>
                     </div>
+                </div>
 
-                    <div className="flex items-center gap-2 text-[10.5px] text-gray-400 dark:text-gray-500 flex-wrap">
-                        <span className="flex items-center gap-0.5 shrink-0">
-                            <Package className="w-3 h-3" />
-                            {formatNum(ad.minQuantity)} {unit}
-                        </span>
-                        {ad.availableQuantity && (
-                            <span className="flex items-center gap-0.5 shrink-0">
-                                <Layers className="w-3 h-3" />
-                                {formatNum(ad.availableQuantity)} {unit}
-                            </span>
-                        )}
+                <div className="flex items-end justify-between mt-0.5">
+                    <div className="flex flex-col">
+                        <div className="flex items-center gap-0.5 text-primary">
+                            <span className="font-headline-md text-[17px] font-bold">{formatNum(ad.unitPrice)}</span>
+                            <span className="font-label-md text-[9px]">تومان/{unit}</span>
+                        </div>
+                        <div className="absolute top-2 left-2 flex justify-center px-2 gap-1 bg-primary backdrop-blur-sm py-0.5 rounded-full shadow-md border border-gray-200/50 dark:border-white/10">
+                            <Clock className="w-3 h-3 text-surface-container-lowest" />
+                            <span className="text-surface-container-lowest  text-[10px] font-bold">{relativeTime}</span>
+                        </div>
+                    </div>
+                    <div className="flex gap-0.5">
                         {hasCheque && (
-                            <span className="font-semibold text-blue-500 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-1.5 py-px rounded shrink-0">چکی</span>
+                            <span className="bg-primary-container/10 text-primary px-1.5 py-0.5 rounded font-label-md text-[9px] border border-primary-container/20">چکی</span>
                         )}
                         {hasInstallment && (
-                            <span className="font-semibold text-emerald-500 dark:text-emerald-400 bg-green-50 dark:bg-green-900/20 px-1.5 py-px rounded shrink-0">اقساط</span>
-                        )}
-                        {isUrgent && (
-                            <span className="flex items-center gap-0.5 text-red-500 shrink-0">
-                                <Clock className="w-3 h-3 animate-pulse" />
-                                فوری
-                            </span>
+                            <span className="bg-tertiary-container/10 text-tertiary px-1.5 py-0.5 rounded font-label-md text-[9px] border border-tertiary-container/20">اقساط</span>
                         )}
                     </div>
                 </div>
             </div>
+        </div>
+    );
 
-            {/* ═══ دسکتاپ: عمودی فشرده ═══ */}
-            <div className="hidden lg:flex flex-col">
-                <div className="relative w-full aspect-[5/3] bg-gray-50 dark:bg-gray-800/30 border-b border-gray-100 dark:border-gray-800">
-                    <Image
-                        src={imageUrl}
-                        alt={ad.productType || ad.title}
-                        fill
-                        className="object-contain p-3"
-                        sizes="(max-width:1280px) 33vw, 25vw"
-                        unoptimized
-                    />
+    // ─── طرح دسکتاپ (مطابق با طرح مرجع) ───
+    const DesktopLayout = () => (
+        <div className="bg-surface-container-lowest  border border-outline-variant rounded-[4px] overflow-hidden premium-shadow card-hover transition-all duration-300 flex flex-col group  ">
+            <div className="relative h-48 overflow-hidden">
+                <Image
+                    src={imageUrl}
+                    alt={ad.productType || ad.title}
+                    fill
+                    className="object-cover transition-transform duration-500 group-hover:scale-110"
+                    unoptimized
+                />
+
+                {ad.isBumped && (
+                    <div className="absolute  top-2 p-1 right-2 flex justify-center   gap-1 bg-error   rounded-full">
+                        <Star className="w-3 h-3   text-white" />
+                    </div>
+                )}
+
+                {hasInstallment && (
+                    <div className="absolute top-2 right-6 flex justify-center  px-2 gap-1 bg-error py-1  rounded-full">
+                        <Star className="w-3 h-3  text-white" />
+                        <span className="bg-tertiary text-on-tertiary px-1 py-1 rounded-full text-[10px] font-bold shadow-md">اقساط</span>
+                    </div>
+                )}
+
+                <div className="absolute top-2 left-2 flex justify-center p-2 gap-1 bg-blue-100 dark:bg-primary/20 py-1 rounded-full shadow-sm">
+                    <Clock className="w-3 h-3 text-blue-950 dark:text-primary-300" />
+                    <span className="text-blue-950 dark:text-primary-300 text-[9px] font-bold">{relativeTime}</span>
                 </div>
 
-                <div className="p-3 flex flex-col gap-1.5">
-                    <div className="flex items-center gap-1 min-w-0">
-                        <h3 className="font-bold text-[12.5px] text-gray-900 dark:text-white truncate leading-tight">
-                            {ad.productType || ad.title}
-                        </h3>
-                        {tier && tier !== 'none' && (
-                            <BadgeCheck className={cn("w-3.5 h-3.5 shrink-0 -mt-px", tierColor)} strokeWidth={2.5} />
-                        )}
-                    </div>
-
-                    <div className="flex items-center gap-1.5 text-[11px] text-gray-500 dark:text-gray-400 min-w-0">
-                        <span className="truncate">{ad.business?.name || '—'}</span>
-                        {ad.city && (
-                            <>
-                                <span className="text-gray-200 dark:text-gray-700 shrink-0">·</span>
-                                <MapPin className="w-2.5 h-2.5 shrink-0 text-primary/60" />
-                                <span className="shrink-0">{ad.city}</span>
-                            </>
-                        )}
-                    </div>
-
-                    <div className="flex items-baseline gap-1">
-                        <span className="text-[17px] font-extrabold tracking-tight text-gray-900 dark:text-white leading-none">
-                            {formatNum(ad.unitPrice)}
-                        </span>
-                        <span className="text-[10px] text-gray-400 dark:text-gray-500 leading-none">
-                            تومان/{unit}
-                        </span>
-                    </div>
-
-                    <div className="flex items-center gap-2 text-[10px] text-gray-400 dark:text-gray-500 flex-wrap">
-                        <span className="flex items-center gap-0.5 shrink-0">
-                            <Package className="w-2.5 h-2.5" />
-                            {formatNum(ad.minQuantity)} {unit}
-                        </span>
-                        {ad.availableQuantity && (
-                            <span className="flex items-center gap-0.5 shrink-0">
-                                <Layers className="w-2.5 h-2.5" />
-                                {formatNum(ad.availableQuantity)} {unit}
-                            </span>
-                        )}
-                        {hasCheque && (
-                            <span className="font-semibold text-blue-500 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-1.5 py-px rounded shrink-0">چکی</span>
-                        )}
-                        {hasInstallment && (
-                            <span className="font-semibold text-emerald-500 dark:text-emerald-400 bg-green-50 dark:bg-green-900/20 px-1.5 py-px rounded shrink-0">اقساط</span>
-                        )}
-                        {isUrgent && (
-                            <span className="flex items-center gap-0.5 text-red-500 shrink-0">
-                                <Clock className="w-2.5 h-2.5 animate-pulse" />
-                                فوری
-                            </span>
-                        )}
-                    </div>
+            </div>
+            <div className="p-3 flex-1 flex flex-col gap-1.5">
+                <div className="flex items-start justify-between">
+                    <h4 className="font-body-lg text-[15px] font-bold leading-tight line-clamp-2">
+                        {ad.productType || ad.title}
+                    </h4>
+                    {!ad.isAnonymous && (
+                        <Verified className={cn("w-5 h-5 -current", tierColor)} />
+                    )}
                 </div>
+                <div className="flex items-center gap-1.5">
+                    {ad.isAnonymous ? (
+                        <span className="flex items-center gap-1 text-[10px] text-gray-500 dark:text-gray-400 font-medium">
+                            <Lock className="w-3 h-3" />
+                            انتشار ناشناس (فقط تماس)
+                        </span>
+                    ) : (
+                        <span className="font-label-md text-[12px] text-on-surface-variant">
+                            {ad.business?.name || 'فروشنده'}
+                        </span>
+                    )}
+                </div>
+                <div className="mt-auto  pt-2 flex items-end justify-between border-t border-outline-variant/30">
+                    <div className="flex flex-1 items-center  justify-between">
+                        <span className="font-label-md text-[11px] text-outline">قیمت هر {unit}:</span>
+                        <span className="font-title-lg text-[18px] text-primary font-bold">
+                            {formatNum(ad.unitPrice)} <span className="text-[13px] font-normal">تومان</span>
+                        </span>
+                    </div>
+                    {hasCheque && (
+                        <span className="bg-secondary-container text-on-secondary-container px-2 py-1 rounded-lg text-[10px] font-bold">چکی</span>
+                    )}
+                </div>
+            </div>
+            <div className="bg-surface-container p-2 flex justify-between items-center px-3 border-t border-outline-variant">
+                <div className="flex items-center gap-1 text-on-surface-variant">
+                    <span className="material-symbols-outlined text-sm">inventory_2</span>
+                    <span className="font-label-md text-[10px]">موجودی: {ad.availableQuantity ? `${formatNum(ad.availableQuantity)} ${unit}` : 'موجود'}</span>
+                </div>
+                <div className="flex items-center gap-1 text-on-surface-variant">
+                    <span className="material-symbols-outlined text-sm">shopping_cart_checkout</span>
+                    <span className="font-label-md text-[10px]">حداقل: {formatNum(ad.minQuantity)} {unit}</span>
+                </div>
+            </div>
+        </div>
+    );
+
+    // ─── کلیک روی کارت ───
+    const handleCardClick = () => {
+        if (ad.isAnonymous) {
+            onContact(ad.id);
+        } else {
+            router.push(`/ad/${ad.id}`);
+        }
+    };
+
+    return (
+        <div
+            onClick={handleCardClick}
+            className="cursor-pointer">
+            <div className="block md:hidden">
+                <MobileLayout />
+            </div>
+            <div className="hidden md:block">
+                <DesktopLayout />
             </div>
         </div>
     );

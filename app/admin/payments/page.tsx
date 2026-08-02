@@ -110,7 +110,7 @@ export default function AdminPaymentsPage() {
         <div className="p-4 md:p-6 max-w-full mx-auto">
             {/* هدر */}
             <div className="flex items-center gap-3 mb-4">
-                <h1 className="text-xl font-bold text-on-surface">گزارش پرداخت‌ها</h1>
+                <h1 className="text-xs font-bold text-on-surface">گزارش پرداخت‌ها</h1>
                 <span className="text-xs text-on-surface-variant bg-surface-container-high px-2 py-1 rounded-full">{pagination.total.toLocaleString('fa-IR')} فیش</span>
                 <div className="relative flex-1 max-w-sm mr-auto">
                     <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant/50" />

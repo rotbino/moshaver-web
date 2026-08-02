@@ -168,7 +168,7 @@ export default function PurchaseCreditPage() {
                 toast.success('فیش شما ارسال شد. پس از تایید مدیر، اعتبار شما افزایش می‌یابد.');
                 await refetchBalance();
                 setTimeout(() => {
-                    router.push('/credit/transactions');
+                    router.push('/credit/payments');
                 }, 2000);
             }
         } catch (error: any) {
@@ -183,7 +183,7 @@ export default function PurchaseCreditPage() {
     if (showSuccess) {
         return (
             <div className="min-h-screen flex flex-col bg-surface">
-                <FormHeader title="خرید اعتبار" backUrl="/" />
+                <FormHeader title="خرید اعتبار" backUrl="/profile" />
                 <main className="flex-1 flex items-center justify-center px-4">
                     <div className="text-center space-y-4 max-w-sm w-full">
                         <div className="w-20 h-20 mx-auto rounded-full bg-green-50 border-2 border-green-200 flex items-center justify-center">
@@ -207,7 +207,7 @@ export default function PurchaseCreditPage() {
 
     return (
         <div className="min-h-screen flex flex-col bg-surface pb-24">
-            <FormHeader title="خرید اعتبار" backUrl="/" />
+            <FormHeader title="خرید اعتبار" backUrl="/profile" />
 
             <main className="flex-1 w-full max-w-lg mx-auto px-4 pt-20">
                 <form onSubmit={handleSubmit} className="space-y-6">
@@ -519,7 +519,7 @@ export default function PurchaseCreditPage() {
                     {/* راهنمای تکمیلی برای روش کارت به کارت */}
                     {paymentMethod === 'manual' && (
                         <div className="text-center text-xs text-amber-700/70 bg-amber-50/50 border border-amber-200/30 rounded-xl p-3">
-                            <p>پس از ارسال فیش، مدیر بازار آن را بررسی کرده و در اسرع وقت اعتبار شما را افزایش می‌دهد.</p>
+                            <p> اگر در زمینه پرداخت سوال دارید با پشتیبان تماس بگیرید.</p>
                         </div>
                     )}
 
@@ -534,15 +534,15 @@ export default function PurchaseCreditPage() {
                                 <Phone className="w-4 h-4" />
                                 <span>
                                     {supportName && `${supportName} - `}
-                                    سوال در مورد پرداخت و اعتبار؟ با پشتیبان تماس بگیرید
+                                    پشتیبان بخش پرداخت
                                 </span>
                             </button>
                         </div>
                     )}
 
                     <div className="text-center text-xs text-on-surface-variant/60 space-y-1">
-                        <p>پس از پرداخت، اعتبار به کیف پول شما اضافه می‌شود</p>
-                        <p>در صورت بروز مشکل، با پشتیبانی تماس بگیرید</p>
+                        <p>پس از تایید فیش، اعتبار به کیف پول شما اضافه می‌شود</p>
+
                     </div>
                 </form>
             </main>

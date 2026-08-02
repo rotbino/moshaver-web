@@ -4,7 +4,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter, usePathname, useParams } from 'next/navigation';
 import { useSelector } from 'react-redux';
-import {ArrowLeft, ArrowRight, Headphones} from 'lucide-react';
+import { ArrowLeft, ArrowRight, Headphones } from 'lucide-react';
 import { RootState } from '@/lib/store/store';
 import { useArms } from '@/lib/api/apiHooks';
 import { toast } from 'sonner';
@@ -17,10 +17,10 @@ import { useFilters } from '@/lib/hooks/useFilters';
 interface MobileHeaderProps {
     showLocation?: boolean;
     fixed?: boolean;
-    showBack?:boolean
+    showBack?: boolean;
 }
 
-export default function MobileHeader({ showLocation = false,showBack=true, fixed = true }: MobileHeaderProps) {
+export default function MobileHeader({ showLocation = false, showBack = false, fixed = true }: MobileHeaderProps) {
     const router = useRouter();
     const pathname = usePathname();
     const params = useParams();
@@ -70,20 +70,19 @@ export default function MobileHeader({ showLocation = false,showBack=true, fixed
     const armSlogan = currentArm?.slogan || 'قیمت امروز فروشندگان عمده مصالح';
 
     const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, '') || 'http://localhost:3011';
-    const logoFileId = (currentArm as any)?.config?.general?.logoFileId || currentArm?.logoUrl; // ✅ اصلاح شد
+    const logoFileId = (currentArm as any)?.config?.general?.logoFileId || currentArm?.logoUrl;
     const logoUrl = (currentArm as any)?.config?.general?.logoUrl || currentArm?.logoUrl;
     const logoSrc = logoFileId ? `${API_BASE}/file/${logoFileId}` : logoUrl || '/images/logo.png';
 
     const showJoin = isHomePage && (!isAuthenticated || !isMember) && !armsLoading;
 
-
     return (
-        <header className=" z-40 bg-white ">
+        <header className="z-40 bg-white dark:bg-gray-900 border-b border-outline-variant/20 dark:border-gray-800">
             <div className="flex items-center justify-between px-4 h-16">
                 <div className="flex items-center gap-2.5 flex-1 min-w-0">
                     {showBack && (
                         <button onClick={() => router.back()} className="p-1.5 -ml-1">
-                            <ArrowRight className="w-5 h-5 text-gray-500" />
+                            <ArrowRight className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                         </button>
                     )}
                     <div className="w-9 h-9 cursor-pointer relative rounded-lg overflow-hidden flex-shrink-0" onClick={() => router.push('/')}>
@@ -95,7 +94,7 @@ export default function MobileHeader({ showLocation = false,showBack=true, fixed
                                 {armName}
                             </button>
                             {showJoin && (
-                                <button onClick={handleJoinClick} className="bg-red-600 text-white px-2 py-0.5 rounded text-[9px] font-bold disabled:opacity-50">
+                                <button onClick={handleJoinClick} className="bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 text-white px-2 py-0.5 rounded text-[9px] font-bold disabled:opacity-50 transition-colors">
                                     {isJoining ? '...' : 'عضویت'}
                                 </button>
                             )}
@@ -105,10 +104,11 @@ export default function MobileHeader({ showLocation = false,showBack=true, fixed
                 </div>
 
                 <div className="flex items-center gap-1">
-                    {!showLocation && <ThemeToggle />}
-                    <button onClick={handleSupportClick} className="p-2 text-gray-400 hover:text-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
+                    <ThemeToggle />
+                    {/* <button onClick={handleSupportClick} className="p-2 text-gray-400 hover:text-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
                         <Headphones className="w-5 h-5" />
-                    </button>
+                    </button>*/}
+
                 </div>
             </div>
         </header>

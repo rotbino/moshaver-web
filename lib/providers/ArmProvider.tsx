@@ -19,6 +19,7 @@ const PUBLIC_PATHS = [
     '/business',
     '/profile',
     '/ad',
+
     '/ad/create',
     '/ad/edit',
     '/dashboard',
@@ -27,6 +28,9 @@ const PUBLIC_PATHS = [
     '/credit/purchase',
     '/credit/verify',
     '/feedback',
+    '/credit/payments',
+    '/credit/report',
+
 ];
 
 interface ArmProviderProps {

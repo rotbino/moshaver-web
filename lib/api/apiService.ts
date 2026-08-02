@@ -130,7 +130,7 @@ export const apiService = {
         getVitrine: (slug: string, query: AdListQuery): Promise<{ arm: any; ads: Ad[]; pagination: any }> =>
             apiRequest(`/ad/arm/${slug}`, { method: 'GET', params: query }),
 
-        getBusinessAds: (businessId: string): Promise<Ad[]> =>
+        getBusinessAds: (businessId: string): Promise<any[]> =>
             apiRequest(`/ad/business/${businessId}`),
 
         getOne: (id: string): Promise<Ad> =>
@@ -162,6 +162,32 @@ export const apiService = {
 
         bulkUpdate: (data: { updates: { id: string; unitPrice: number }[] }) =>
             apiRequest('/ad/bulk-update', { method: 'PUT', data }),
+        // ✅ دریافت جزئیات کامل آگهی (برای صفحه جزئیات)
+        getDetail: (id: string): Promise<any> =>
+            apiRequest(`/ad/${id}/detail`),
+
+        // ✅ دریافت آمار تعاملات آگهی
+        getStats: (id: string): Promise<any> =>
+            apiRequest(`/ad/${id}/stats`),
+
+        // ✅ ثبت تعامل (بازدید، ذخیره، تماس، کامنت، اشتراک)
+        interact: (id: string, type: 'view' | 'save' | 'call' | 'comment' | 'share', metadata?: any): Promise<any> =>
+            apiRequest(`/ad/${id}/interact`, {
+                method: 'POST',
+                data: { type, metadata },
+            }),
+
+        // ✅ ذخیره آگهی (bookmark)
+        save: (id: string): Promise<any> =>
+            apiRequest(`/ad/${id}/save`, { method: 'POST' }),
+
+        // ✅ حذف از لیست ذخیره‌ها
+        unsave: (id: string): Promise<any> =>
+            apiRequest(`/ad/${id}/save`, { method: 'DELETE' }),
+
+        // ✅ دریافت لیست آگهی‌های ذخیره‌شده کاربر (در صورت نیاز)
+        getSavedAds: (): Promise<any[]> =>
+            apiRequest('/ad/saved'), // مسیر فرضی - در صورت وجود در بک‌اند
 
     },
 
@@ -197,12 +223,20 @@ export const apiService = {
                 method: 'POST',
                 data: { reason },
             }),
-        getCombinedTransactions: (params?: {
+        getPaymentTransactions: (params?: {
             limit?: number;
             offset?: number;
             paymentMethod?: 'online' | 'manual';
-            status?: 'pending' | 'success' | 'failed';
-        }) => apiClient.get('/credit/transactions/combined', { params }),
+            status?: 'pending' | 'success' | 'failed' | 'approved' | 'rejected';
+        }): Promise<any> =>
+            apiRequest('/credit/payments', { params }),
+
+        getCreditReport: (params?: {
+            limit?: number;
+            offset?: number;
+            type?: 'purchase' | 'spend' | 'bonus' | 'refund';
+        }): Promise<any> =>
+            apiRequest('/credit/report', { params }),
     },
 
     // ============================================================

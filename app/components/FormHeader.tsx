@@ -43,7 +43,7 @@ export function FormHeader({
 
                 {/* عنوان  */}
                 <div className="flex flex-col text-right">
-                    <span className="font-headline-sm  text-headline-sm text-[13px] text-on-surface leading-tight">
+                    <span className="font-headline-sm  font-bold text-[12px] text-on-surface leading-tight">
                         {title}
                     </span>
 

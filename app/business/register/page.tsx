@@ -32,7 +32,7 @@ export default function RegisterBusinessPage() {
         provinceLabel: '',
         cityCode: '',
         cityLabel: '',
-        position: 'صاحب کسب‌وکار',
+        position: 'مالک و مسوول فروش',
         industryId: '',
     });
     const [errors, setErrors] = useState<Record<string, string>>({});

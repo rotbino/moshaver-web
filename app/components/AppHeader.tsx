@@ -10,11 +10,11 @@ interface AppHeaderProps {
     showBack?:boolean
 }
 
-export function AppHeader({ showLocation = false, fixed = true, showBack }: AppHeaderProps) {
+export function AppHeader({ showLocation = false, fixed = true, showBack=true }: AppHeaderProps) {
     return (
         <>
             <div className="lg:hidden">
-                <MobileHeader showLocation={showLocation} fixed={fixed} />
+                <MobileHeader showLocation={showLocation} showBack={showBack} fixed={fixed} />
             </div>
             <div className="hidden lg:block">
                 <DesktopHeader showBack={showBack} fixed={fixed}/>

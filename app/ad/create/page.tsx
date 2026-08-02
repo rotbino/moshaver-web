@@ -169,7 +169,7 @@ export default function CreateAdPage() {
     if (isLoading || redirecting || !business) {
         return (
             <div className="min-h-screen flex flex-col bg-background">
-                <FormHeader title="ثبت قیمت" backUrl="/" />
+                <FormHeader title="ثبت قیمت" backUrl="/profile" />
                 <main className="flex-1 flex items-center justify-center">
                     <div className="text-center">
                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto" />
@@ -186,7 +186,7 @@ export default function CreateAdPage() {
     if (needsCreditPurchase) {
         return (
             <div className="min-h-screen flex flex-col bg-surface">
-                <FormHeader title="ثبت قیمت" backUrl="/" />
+                <FormHeader title="ثبت قیمت" backUrl="/profile" />
                 <main className="flex-1 flex items-center justify-center px-4">
                     <div className="text-center space-y-6 max-w-sm w-full">
                         <div className="w-20 h-20 mx-auto rounded-full bg-amber-50 border-2 border-amber-200 flex items-center justify-center">
@@ -197,18 +197,13 @@ export default function CreateAdPage() {
                                 اعتبار آگهی رایگان شما تمام شده
                             </h2>
                             <p className="text-sm text-on-surface-variant leading-relaxed">
-                                سهمیه <span className="font-bold text-on-surface">{maxFreeAdsPerMonth}</span> آگهی رایگان شما استفاده شده است.
-                                برای ثبت آگهی جدید به <span className="font-bold text-primary">{bumpCost}</span> اعتبار نیاز دارید.
-                                موجودی فعلی شما <span className="font-bold">{creditBalance?.balance ?? 0}</span> اعتبار است.
+                                سقف <span className="font-bold text-on-surface">{maxActiveAdsPerUser}</span> آگهی فعال همزمان پر شده است.
+                                برای ثبت آگهی بیشتر اعتبار خریداری نمایید،
+                                موجودی فعلی: <span className="font-bold">{creditBalance?.balance ?? 0}</span> اعتبار.
                             </p>
                         </div>
 
-                        {hasReachedMaxAds && (
-                            <div className="flex items-center gap-2 justify-center text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl p-3">
-                                <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-                                <span>شما همچنین به سقف {maxActiveAdsPerUser} آگهی فعال رسیده‌اید</span>
-                            </div>
-                        )}
+
 
                         <Link href="/credit/purchase" className="block">
                             <button
@@ -404,7 +399,7 @@ export default function CreateAdPage() {
 
     return (
         <div className="min-h-screen flex flex-col bg-surface pb-28" onKeyDown={handleKeyDown}>
-            <FormHeader title="ثبت قیمت جدید" backUrl="/" />
+            <FormHeader title="ثبت قیمت جدید" backUrl="/profile" />
 
             <main className="flex-1 w-full max-w-2xl mx-auto px-4 pt-20">
 
@@ -483,6 +478,7 @@ export default function CreateAdPage() {
                                     </label>
                                     <input
                                         type="text"
+                                        maxLength={30}
                                         value={formData.productType}
                                         onChange={(e) => setFormData(prev => ({ ...prev, productType: e.target.value }))}
                                         placeholder={categoryExample ? `مثال: ${categoryExample}` : `مثال: ${selectedCategoryData.name || selectedCategoryData.title} درجه یک`}
@@ -850,8 +846,9 @@ export default function CreateAdPage() {
                                 onClick={prevStep}
                                 className="h-12 px-5 rounded-xl border-2 border-outline-variant/40 bg-white text-sm font-medium text-on-surface flex items-center gap-2 hover:bg-surface-container-lowest transition-all active:scale-95"
                             >
-                                <ArrowRight className="w-4 h-4" />
                                 قبلی
+                                <ArrowLeft className="w-4 h-4" />
+
                             </button>
                         ) : (
                             <div />
@@ -863,8 +860,9 @@ export default function CreateAdPage() {
                                 onClick={nextStep}
                                 className="h-12 px-6 rounded-xl bg-primary text-white text-sm font-bold flex items-center gap-2 hover:bg-primary/90 transition-all active:scale-95 shadow-md shadow-primary/20"
                             >
+
+                                <ArrowRight className="w-4 h-4" />
                                 بعدی
-                                <ArrowLeft className="w-4 h-4" />
                             </button>
                         ) : (
                             <button

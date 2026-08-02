@@ -133,15 +133,15 @@ export default function HomeContent() {
     const hasAds = vitrineData?.ads && vitrineData.ads.length > 0;
 
     const toolbarDescriptionText = isLeaf && minQuantity > 0
-        ? `بهترین پیشنهادها برای خرید ${minQuantity.toLocaleString()} ${selectedUnit} ${selectedNode?.title || ''}`
+        ? `بهترین قیمت ها برای خرید ${minQuantity.toLocaleString()} ${selectedUnit} ${selectedNode?.title || ''}`
         : null;
 
     return (
         <div className="h-screen flex flex-col bg-surface dark:bg-gray-950">
-            {/* هدر: همیشه بالای صفحه */}
+            {/* هدر */}
             <AppHeader showLocation showBack={false} />
 
-            {/* فیلتر دسته‌بندی: چسبیده به زیر هدر */}
+            {/* فیلتر دسته‌بندی */}
             <div className="sticky top-0 z-30 bg-white dark:bg-gray-900 border-b border-outline-variant/20 dark:border-gray-800 shadow-sm flex-shrink-0">
                 <CategoryFilter
                     categoryTree={categoryTree}
@@ -154,7 +154,7 @@ export default function HomeContent() {
                 />
 
                 {/* تولبار یکپارچه */}
-                {(toolbarDescriptionText || selectedCategoryId) && (
+                {(toolbarDescriptionText ) && (
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 px-3 lg:px-6 py-2.5 bg-surface-container-lowest dark:bg-gray-900 border-t border-outline-variant/10 dark:border-gray-800">
                         <p className="text-[11px] sm:text-xs text-on-surface-variant/60 dark:text-gray-400 leading-relaxed truncate">
                             {toolbarDescriptionText}
@@ -188,19 +188,19 @@ export default function HomeContent() {
                     </div>
                 )}
 
-                {!toolbarDescriptionText && <div className="h-3 bg-surface-container-lowest dark:bg-gray-900 border-b border-outline-variant/20 dark:border-gray-800" />}
+
             </div>
 
-            {/* محتوای اصلی: تنها بخشی که اسکرول می‌خورد */}
-            <div className="flex-1  pb-16 lg:pb-0">
-                <div className="px-3 lg:px-6 py-6 max-w-8xl mx-auto">
+            {/* محتوای اصلی */}
+            <div className="flex-1 pb-16 lg:pb-0">
+                <div className="px-2 lg:px-6 py-6 max-w-8xl mx-auto">
                     {vitrineLoading ? (
                         <div className="text-center py-20">
                             <div className="animate-spin rounded-full h-10 w-10 border-2 border-primary border-t-transparent mx-auto mb-4" />
                             <p className="text-sm text-on-surface-variant dark:text-gray-400">در حال بارگذاری قیمت‌ها...</p>
                         </div>
                     ) : hasAds ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 lg:gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2 md:gap-2">
                             {vitrineData.ads.map((ad: any) => (
                                 <AdCard key={ad.id} ad={ad} onContact={handleContactClick} onDetail={setSelectedAd} />
                             ))}
@@ -211,12 +211,12 @@ export default function HomeContent() {
                                 <Package className="w-10 h-10 text-on-surface-variant/30 dark:text-gray-600" />
                             </div>
                             <h2 className="text-xl font-bold text-on-surface dark:text-gray-100 mb-3">
-                                {filterParams.categoryId || filterParams.minQuantity ? 'هیچ قیمتی با این فیلترها پیدا نشد' : 'هنوز قیمتی ثبت نشده است'}
+                                {filterParams.categoryId || filterParams.minQuantity ? 'هیچ قیمتی با این فیلترها پیدا نشد' : 'امروز قیمت جدیدی ثبت نشده است'}
                             </h2>
                             <p className="text-sm text-on-surface-variant dark:text-gray-400 mb-8 max-w-md mx-auto leading-relaxed">
                                 {filterParams.categoryId || filterParams.minQuantity
                                     ? 'فیلترهای انتخاب‌شده را تغییر دهید یا از دسته‌بندی‌های دیگر دیدن کنید.'
-                                    : 'اگر فروشنده عمده هستید، همین حالا اولین قیمت خود را ثبت کنید.'}
+                                    : 'اگر فروشنده عمده هستید، این یک فرصت عالی برای دیده شدن شماست. همین حالا اولین قیمت خود را رایگان ثبت کنید.'}
                             </p>
                             <div className="flex items-center justify-center gap-3 flex-wrap">
                                 {(filterParams.categoryId || filterParams.minQuantity) && (
@@ -235,12 +235,12 @@ export default function HomeContent() {
                 </div>
             </div>
 
-            {/* فوتر دسکتاپ (در جریان عادی) */}
+            {/* فوتر دسکتاپ */}
             <div className="hidden lg:block flex-shrink-0">
                 <AppFooter />
             </div>
 
-            {/* فوتر موبایل (fixed) + padding برای جلوگیری از مخفی شدن محتوا */}
+            {/* فوتر موبایل */}
             <div className="lg:hidden">
                 <AppFooter activeTab="dashboard" />
             </div>

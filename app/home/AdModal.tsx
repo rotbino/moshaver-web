@@ -23,9 +23,9 @@ function timeLeft(expiresAt: string) {
         (new Date(expiresAt).getTime() - Date.now()) / (1000 * 60 * 60),
     );
     if (hours <= 0) return 'منقضی شده';
-    if (hours < 24) return `${hours} ساعت مانده`;
+    if (hours < 24) return `${hours} ساعت `;
     const days = Math.floor(hours / 24);
-    return `${days} روز مانده`;
+    return `${days} روز `;
 }
 
 /* ─── سلول اطلاعات سریع ─── */
@@ -85,7 +85,7 @@ function PriceCard({
                 </div>
                 <div
                     className={cn(
-                        'flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-full',
+                        'flex items-center gap-1 text-[10px] font-medium px-2 py-1.5 rounded-full',
                         isExpired
                             ? 'bg-red-50 dark:bg-red-900/20 text-red-500'
                             : isUrgent
@@ -96,6 +96,7 @@ function PriceCard({
                     <Clock
                         className={cn('w-3.5 h-3.5', isUrgent && 'animate-pulse')}
                     />
+                    اعتبار قیمت:
                     {timeLeft(expiresAt)}
                 </div>
             </div>
@@ -365,12 +366,12 @@ export default function AdModal({ ad, onClose, onContact }: AdModalProps) {
                                 />
                                 <InfoCell
                                     icon={<MapPin className="w-4 h-4" />}
-                                    label="مکان تحویل"
+                                    label="مکان کالا"
                                     value={ad.city || 'نامشخص'}
                                 />
                                 <InfoCell
                                     icon={<Truck className="w-4 h-4" />}
-                                    label="نوع محصول"
+                                    label="عنوان"
                                     value={ad.productType || ad.title}
                                 />
                             </div>
@@ -469,7 +470,7 @@ export default function AdModal({ ad, onClose, onContact }: AdModalProps) {
                         className="w-full flex items-center justify-center gap-2.5 bg-primary hover:bg-primary/90 text-on-primary py-3.5 rounded-2xl font-bold text-sm transition-all active:scale-[0.98] shadow-lg shadow-primary/25"
                     >
                         <Phone className="w-5 h-5" />
-                        تماس با فروشنده و ثبت سفارش
+                        تماس با فروشنده
                     </button>
                 </div>
             </div>

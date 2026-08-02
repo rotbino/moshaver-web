@@ -36,7 +36,7 @@ import {
 export default function TermsPage() {
     return (
         <div className="min-h-screen flex flex-col bg-background pt-16 pb-24">
-            <AppHeader showJoinButton={false} showBack={false}/>
+            <AppHeader showJoinButton={false} showBack={true}/>
 
             <main className="flex-1 w-full max-w-4xl mx-auto px-4 py-8">
                 {/* ============================================================

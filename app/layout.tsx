@@ -43,7 +43,7 @@ export default function RootLayout({
                 <ThemeProvider>
                     <ArmProvider>
                         <AuthSync />
-                        <MembershipBanner />
+                       {/* <MembershipBanner />*/}
                         <ClientLayout>
                             {children}
                         </ClientLayout>

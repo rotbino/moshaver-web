@@ -368,7 +368,22 @@ export interface UploadFileResponse {
 export interface DeleteFileResponse {
     message: string;
 }
+// تراکنشهای کاربر معمولی
 
+export interface Transaction {
+    id: string;
+    amount: number;
+    creditCount: number;
+    status: 'pending' | 'success' | 'failed' | 'approved' | 'rejected';
+    transactionType: 'purchase' | 'credit_request' | 'spend';
+    description: string;
+    createdAt: string;
+    metadata: any;
+    armId: string;
+    paymentMethod: 'online' | 'manual';
+    isRequest: boolean;
+    balanceAfter: number; // ✅ جدید
+}
 //#################Setting
 
 export type PermissionLevel = 1 | 2 | 3;

@@ -50,7 +50,7 @@ export function RefreshModal({ isOpen, onClose, ad, onSuccess }: RefreshModalPro
                 }
             }
 
-            toast.success('آگهی با موفقیت تمدید شد');
+            toast.success('آگهی با موفقیت تمدید و برگه فعال منتقل شد.');
             onSuccess?.();
             onClose();
         } catch (error: any) {
