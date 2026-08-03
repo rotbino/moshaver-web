@@ -55,7 +55,7 @@ export default function ProfileHeader({ user, business, isArmOwner, isSystemAdmi
                         )}
                         {isArmOwner && (
                             <button onClick={() => router.push('/arm-admin')} className="flex items-center justify-center gap-1.5 px-4 py-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-lg text-[13px] font-medium hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-all whitespace-nowrap">
-                                <LayoutDashboard className="w-4 h-4" /> پنل مدیریت بازار
+                                <LayoutDashboard className="w-4 h-4" /> پنل مالک بازار
                             </button>
                         )}
                     </div>
@@ -66,7 +66,7 @@ export default function ProfileHeader({ user, business, isArmOwner, isSystemAdmi
                 className="flex items-center justify-center gap-2 w-full py-3 border border-outline-variant dark:border-gray-700 rounded-xl text-sm text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-gray-800 transition-colors mt-4"
             >
                 <Lightbulb className="w-4 h-4" />
-                نظرات، پیشنهادات و گزارش خطا
+                پیشنهادات و انتقادات
             </button>
         </div>
     );

@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 import { Package, RefreshCw, Headphones, CheckCircle2 } from 'lucide-react';
 import { useFilters } from '@/lib/hooks/useFilters';
 import { cn } from '@/lib/utils';
-import CategoryFilter from './CategoryFilter';
+import FilterBar from './FilterBar';
 import AdCard from './AdCard';
 import AdModal from './AdModal';
 import { LocationFilter } from "@/app/components/LocationFilter";
@@ -27,7 +27,10 @@ export default function HomeContent() {
     const [selectedAd, setSelectedAd] = useState<any>(null);
     const [isCalling, setIsCalling] = useState(false);
     const [sortByPrice, setSortByPrice] = useState(false);
-    const [requireStock, setRequireStock] = useState(false);
+
+    // ─── فیلترهای جدید ───
+    const [minQuantity, setMinQuantity] = useState(0);
+    const [minAvailableQuantity, setMinAvailableQuantity] = useState(0);
 
     const vitrineSlug = currentSlug || 'barton';
     const baseFilterParams = useMemo(() => getFilterParams(), [getFilterParams]);
@@ -52,15 +55,15 @@ export default function HomeContent() {
     const selectedUnit = useMemo(() => selectedNode?.unitShortCode || 'تن', [selectedNode]);
     const isLeaf = selectedNode ? (!selectedNode.children || selectedNode.children.length === 0) : false;
 
-    const volumeFilter = otherFilters.find(f => f.type === 'volume');
-    const minQuantity = baseFilterParams.minQuantity || 0;
-
+    // ─── ساخت فیلترهای نهایی ───
     const filterParams = useMemo(() => ({
         ...baseFilterParams,
         sort: sortByPrice ? 'unitPrice:asc' : undefined,
-        requireSufficientStock: requireStock || undefined,
-    }), [baseFilterParams, sortByPrice, requireStock]);
+        minQuantity: minQuantity || undefined,
+        minAvailableQuantity: minAvailableQuantity || undefined,
+    }), [baseFilterParams, sortByPrice, minQuantity, minAvailableQuantity]);
 
+    // ─── هندلرها ───
     const handleCategorySelect = useCallback((categoryId: string) => {
         const existing = otherFilters.find(f => f.type === 'category');
         if (existing) removeFilter(existing.id);
@@ -73,30 +76,28 @@ export default function HomeContent() {
         router.replace(`?${params.toString()}`, { scroll: false });
     }, [otherFilters, removeFilter, addFilter, categoryTree, findNodeById, router]);
 
-    const initialSyncDone = useRef(false);
-    useEffect(() => {
-        if (initialSyncDone.current || categoryTree.length === 0) return;
-        const catId = searchParams.get('category');
-        if (catId) {
-            const node = findNodeById(categoryTree, catId);
-            if (node) {
-                addFilter({ id: `category-${catId}`, label: node.title, value: catId, type: 'category' });
-                initialSyncDone.current = true;
-            }
-        }
-    }, [categoryTree, searchParams, findNodeById, addFilter]);
-
-    const handleVolumeChange = useCallback((value: number) => {
+    const handleMinQuantityChange = useCallback((value: number) => {
+        setMinQuantity(value);
         if (value <= 0) {
             const existing = otherFilters.find(f => f.type === 'volume');
             if (existing) removeFilter(existing.id);
-            return;
+        } else {
+            const existing = otherFilters.find(f => f.type === 'volume');
+            if (existing) removeFilter(existing.id);
+            addFilter({ id: `volume-${value}`, label: `${value.toLocaleString()} ${selectedUnit}`, value: value.toString(), type: 'volume' });
         }
-        if (volumeFilter) removeFilter(volumeFilter.id);
-        addFilter({ id: `volume-${value}`, label: `${value.toLocaleString()} ${selectedUnit}`, value: value.toString(), type: 'volume' });
-    }, [otherFilters, removeFilter, addFilter, volumeFilter, selectedUnit]);
+    }, [otherFilters, removeFilter, addFilter, selectedUnit]);
 
-    const handleClearAll = useCallback(() => { clearFilters(); setSortByPrice(false); setRequireStock(false); }, [clearFilters]);
+    const handleMinAvailableChange = useCallback((value: number) => {
+        setMinAvailableQuantity(value);
+    }, []);
+
+    const handleClearAll = useCallback(() => {
+        clearFilters();
+        setSortByPrice(false);
+        setMinQuantity(0);
+        setMinAvailableQuantity(0);
+    }, [clearFilters]);
 
     const handleContactClick = useCallback(async (adId: string) => {
         if (!isAuthenticated) { router.push(`/login?arm=${currentSlug}&redirect=/${currentSlug}`); return; }
@@ -128,38 +129,52 @@ export default function HomeContent() {
         setIsCheckingArm(false);
     }, [currentSlug, currentArm, armLoading, router]);
 
+    // ─── همگام‌سازی اولیه ───
+    const initialSyncDone = useRef(false);
+    useEffect(() => {
+        if (initialSyncDone.current || categoryTree.length === 0) return;
+        const catId = searchParams.get('category');
+        if (catId) {
+            const node = findNodeById(categoryTree, catId);
+            if (node) {
+                addFilter({ id: `category-${catId}`, label: node.title, value: catId, type: 'category' });
+                initialSyncDone.current = true;
+            }
+        }
+    }, [categoryTree, searchParams, findNodeById, addFilter]);
+
     if (armLoading || isCheckingArm) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto" /></div>;
 
     const hasAds = vitrineData?.ads && vitrineData.ads.length > 0;
 
     const toolbarDescriptionText = isLeaf && minQuantity > 0
-        ? `بهترین قیمت ها برای خرید ${minQuantity.toLocaleString()} ${selectedUnit} ${selectedNode?.title || ''}`
+        ? `بهترین پیشنهادها برای خرید ${minQuantity.toLocaleString()} ${selectedUnit} ${selectedNode?.title || ''}`
         : null;
 
     return (
         <div className="h-screen flex flex-col bg-surface dark:bg-gray-950">
-            {/* هدر */}
             <AppHeader showLocation showBack={false} />
 
-            {/* فیلتر دسته‌بندی */}
+            {/* فیلتر بار جدید */}
             <div className="sticky top-0 z-30 bg-white dark:bg-gray-900 border-b border-outline-variant/20 dark:border-gray-800 shadow-sm flex-shrink-0">
-                <CategoryFilter
+                <FilterBar
                     categoryTree={categoryTree}
                     selectedCategoryId={selectedCategoryId}
                     onSelect={handleCategorySelect}
                     isLeaf={isLeaf}
                     selectedUnit={selectedUnit}
                     minQuantity={minQuantity}
-                    onVolumeChange={handleVolumeChange}
+                    onMinQuantityChange={handleMinQuantityChange}
+                    minAvailableQuantity={minAvailableQuantity}
+                    onMinAvailableChange={handleMinAvailableChange}
                 />
 
                 {/* تولبار یکپارچه */}
-                {(toolbarDescriptionText ) && (
+               {/* {toolbarDescriptionText && (
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 px-3 lg:px-6 py-2.5 bg-surface-container-lowest dark:bg-gray-900 border-t border-outline-variant/10 dark:border-gray-800">
                         <p className="text-[11px] sm:text-xs text-on-surface-variant/60 dark:text-gray-400 leading-relaxed truncate">
                             {toolbarDescriptionText}
                         </p>
-
                         <div className="flex items-center gap-3 flex-shrink-0">
                             <label className="flex items-center gap-1.5 text-[11px] sm:text-xs text-on-surface-variant dark:text-gray-400 cursor-pointer select-none group">
                                 <div className="relative flex items-center">
@@ -171,36 +186,24 @@ export default function HomeContent() {
                                 <span className="group-hover:text-on-surface dark:group-hover:text-gray-200 transition-colors">بهترین قیمت</span>
                             </label>
 
-                            <label className="flex items-center gap-1.5 text-[11px] sm:text-xs text-on-surface-variant dark:text-gray-400 cursor-pointer select-none group">
-                                <div className="relative flex items-center">
-                                    <input type="checkbox" checked={requireStock} onChange={(e) => setRequireStock(e.target.checked)} className="peer sr-only" />
-                                    <div className="w-4 h-4 rounded border-2 border-outline-variant dark:border-gray-600 bg-surface-container-lowest dark:bg-gray-800 peer-checked:bg-green-600 peer-checked:border-green-600 transition-colors flex items-center justify-center">
-                                        {requireStock && <CheckCircle2 className="w-2.5 h-2.5 text-white" />}
-                                    </div>
-                                </div>
-                                <span className="group-hover:text-on-surface dark:group-hover:text-gray-200 transition-colors">فقط موجودی کافی</span>
-                            </label>
-
-                            <div className=" items-center gap-3 pr-2 border-r border-outline-variant/20 dark:border-gray-700">
+                            <div className="items-center gap-3 pr-2 border-r border-outline-variant/20 dark:border-gray-700">
                                 <LocationFilter />
                             </div>
                         </div>
                     </div>
-                )}
-
-
+                )}*/}
             </div>
 
             {/* محتوای اصلی */}
             <div className="flex-1 pb-16 lg:pb-0">
-                <div className="px-2 lg:px-6 py-6 max-w-8xl mx-auto">
+                <div className="px-3 lg:px-6 py-6 max-w-7xl mx-auto">
                     {vitrineLoading ? (
                         <div className="text-center py-20">
                             <div className="animate-spin rounded-full h-10 w-10 border-2 border-primary border-t-transparent mx-auto mb-4" />
                             <p className="text-sm text-on-surface-variant dark:text-gray-400">در حال بارگذاری قیمت‌ها...</p>
                         </div>
                     ) : hasAds ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2 md:gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 md:gap-4">
                             {vitrineData.ads.map((ad: any) => (
                                 <AdCard key={ad.id} ad={ad} onContact={handleContactClick} onDetail={setSelectedAd} />
                             ))}
@@ -211,12 +214,12 @@ export default function HomeContent() {
                                 <Package className="w-10 h-10 text-on-surface-variant/30 dark:text-gray-600" />
                             </div>
                             <h2 className="text-xl font-bold text-on-surface dark:text-gray-100 mb-3">
-                                {filterParams.categoryId || filterParams.minQuantity ? 'هیچ قیمتی با این فیلترها پیدا نشد' : 'امروز قیمت جدیدی ثبت نشده است'}
+                                {filterParams.categoryId || filterParams.minQuantity ? 'هیچ قیمتی با این فیلترها پیدا نشد' : 'هنوز قیمتی ثبت نشده است'}
                             </h2>
                             <p className="text-sm text-on-surface-variant dark:text-gray-400 mb-8 max-w-md mx-auto leading-relaxed">
                                 {filterParams.categoryId || filterParams.minQuantity
                                     ? 'فیلترهای انتخاب‌شده را تغییر دهید یا از دسته‌بندی‌های دیگر دیدن کنید.'
-                                    : 'اگر فروشنده عمده هستید، این یک فرصت عالی برای دیده شدن شماست. همین حالا اولین قیمت خود را رایگان ثبت کنید.'}
+                                    : 'اگر فروشنده عمده هستید، همین حالا اولین قیمت خود را ثبت کنید.'}
                             </p>
                             <div className="flex items-center justify-center gap-3 flex-wrap">
                                 {(filterParams.categoryId || filterParams.minQuantity) && (
@@ -235,15 +238,8 @@ export default function HomeContent() {
                 </div>
             </div>
 
-            {/* فوتر دسکتاپ */}
-            <div className="hidden lg:block flex-shrink-0">
-                <AppFooter />
-            </div>
-
-            {/* فوتر موبایل */}
-            <div className="lg:hidden">
-                <AppFooter activeTab="dashboard" />
-            </div>
+            <div className="hidden lg:block flex-shrink-0"><AppFooter /></div>
+            <div className="lg:hidden"><AppFooter activeTab="dashboard" /></div>
 
             {selectedAd && <AdModal ad={selectedAd} onClose={() => setSelectedAd(null)} onContact={handleContactClick} />}
         </div>

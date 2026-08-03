@@ -1,4 +1,5 @@
 // app/profile/page.tsx
+
 'use client';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
@@ -9,7 +10,7 @@ import { AppHeader, AppFooter } from '@/app/components';
 import { setUser } from '@/lib/store/slices/authSlice';
 import { EditProfileModal } from '@/app/profile/components/EditProfileModal';
 import { RefreshModal } from '@/app/ad/RefreshModal';
-import { EditModal } from '@/app/ad/EditModal';
+// import { EditModal } from '@/app/ad/EditModal'; // ❌ حذف شد
 import { Key, Factory } from 'lucide-react';
 import { ChangePasswordModal } from '@/app/register/ChangePasswordModal';
 import { toast } from 'sonner';
@@ -26,7 +27,7 @@ import TipsList from './components/TipsList';
 import BusinessList from './components/BusinessList';
 
 export default function ProfilePage() {
-    const router = useRouter();
+    const router = useRouter(); // ✅ اضافه شد
     const dispatch = useDispatch();
     const { user } = useSelector((state: RootState) => state.auth);
     const { data: activeBusiness, isLoading: activeLoading, refetch } = useActiveBusiness();
@@ -37,7 +38,7 @@ export default function ProfilePage() {
     const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false);
     const [selectedAd, setSelectedAd] = useState<any>(null);
     const [isRefreshModalOpen, setIsRefreshModalOpen] = useState(false);
-    const [isEditAdModalOpen, setIsEditAdModalOpen] = useState(false);
+    // ✅ isEditAdModalOpen حذف شد
     const [isArmOwner, setIsArmOwner] = useState(false);
 
     const [selectedBusinessId, setSelectedBusinessId] = useState<string | null>(null);
@@ -92,6 +93,7 @@ export default function ProfilePage() {
     const armConfig = useSelector((state: RootState) => state.arm.currentArm?.config) as any || {};
     const bumpCost = armConfig?.economy?.bumpCost || 10;
     const maxActiveAds = armConfig?.modules?.priceTable?.maxActiveAdsPerUser || 5;
+
     useEffect(() => {
         const checkArmOwner = async () => {
             if (!user) return;
@@ -119,21 +121,14 @@ export default function ProfilePage() {
     };
 
     // ✅ تابع فعال/غیرفعال کردن آگهی
-    // app/profile/page.tsx - پیام مناسب در فرانت‌اند
-
     const handleToggleActive = async (ad: any) => {
         try {
             const newStatus = ad.status === 'active' ? 'inactive' : 'active';
-            const result = await apiService.ad.update(ad.id, { status: newStatus });
+
+            await apiService.ad.update(ad.id, { status: newStatus });
 
             if (newStatus === 'active') {
-                // بررسی اینکه آیا اعتبار کسر شده یا نه (با خواندن metadata)
-                const creditDeducted = result?.metadata?.creditDeducted || false;
-                if (creditDeducted) {
-                    toast.success('آگهی فعال شد و اعتبار مربوطه از حساب شما کسر گردید');
-                } else {
-                    toast.success('آگهی فعال و به برگه آگهی‌های فعال منتقل شد');
-                }
+                toast.success('آگهی فعال و به برگه آگهی‌های فعال منتقل شد');
             } else {
                 toast.success('آگهی غیر فعال و به برگه آگهی‌های غیر فعال منتقل شد');
             }
@@ -142,12 +137,7 @@ export default function ProfilePage() {
             refetch();
             refetchBalance();
         } catch (error: any) {
-            if (error?.data?.errorCode === 'INSUFFICIENT_CREDIT') {
-                const needed = error?.data?.data?.needed || 10;
-                toast.error(`اعتبار کافی نیست. برای فعال‌سازی به ${needed} اعتبار نیاز دارید.`);
-            } else {
-                toast.error(error?.message || 'خطا در تغییر وضعیت آگهی');
-            }
+            toast.error(error?.message || 'خطا در تغییر وضعیت آگهی');
         }
     };
 
@@ -250,17 +240,18 @@ export default function ProfilePage() {
                                     totalAds={totalAds}
                                     activeAds={activeAds}
                                     expiredAds={expiredAds}
-
                                     onRefreshClick={(ad) => { setSelectedAd(ad); setIsRefreshModalOpen(true); }}
-                                    onEditClick={(ad) => { setSelectedAd(ad); setIsEditAdModalOpen(true); }}
+                                    onEditClick={(ad) => {
+                                        // ✅ هدایت به صفحه ویرایش آگهی
+                                        router.push(`/ad/edit/${ad.id}`);
+                                    }}
                                     onRepublishClick={(ad) => {
-                                        // ✅ برای آگهی‌های منقضی نیز همان مودال تمدید باز می‌شود
                                         setSelectedAd(ad);
                                         setIsRefreshModalOpen(true);
                                     }}
-                                    onToggleActive={handleToggleActive}  // ✅ پاس دادن تابع
-                                    onDeleteClick={handleDeleteAd}       // ✅ پاس دادن تابع حذف
-                                    maxActiveAds={maxActiveAds}                    // ✅ مقدار پیش‌فرض، از تنظیمات بازو قابل خواندن است
+                                    onToggleActive={handleToggleActive}
+                                    onDeleteClick={handleDeleteAd}
+                                    maxActiveAds={maxActiveAds}
                                     creditBalance={creditBalance?.balance || 0}
                                     bumpCost={bumpCost}
                                 />
@@ -312,15 +303,16 @@ export default function ProfilePage() {
                                 activeAds={activeAds}
                                 expiredAds={expiredAds}
                                 onRefreshClick={(ad) => { setSelectedAd(ad); setIsRefreshModalOpen(true); }}
-                                onEditClick={(ad) => { setSelectedAd(ad); setIsEditAdModalOpen(true); }}
+                                onEditClick={(ad) => {
+                                    router.push(`/ad/edit/${ad.id}`);
+                                }}
                                 onRepublishClick={(ad) => {
-                                    // ✅ برای آگهی‌های منقضی نیز همان مودال تمدید باز می‌شود
                                     setSelectedAd(ad);
                                     setIsRefreshModalOpen(true);
                                 }}
                                 onToggleActive={handleToggleActive}
                                 onDeleteClick={handleDeleteAd}
-                                maxActiveAds={maxActiveAds }
+                                maxActiveAds={maxActiveAds}
                                 creditBalance={creditBalance?.balance || 0}
                                 bumpCost={bumpCost}
                             />
@@ -346,22 +338,9 @@ export default function ProfilePage() {
                 />
             )}
             {selectedAd && (
-                <>
-                    <RefreshModal
-                        isOpen={isRefreshModalOpen}
-                        onClose={() => { setIsRefreshModalOpen(false);
-                        setSelectedAd(null); }}
-                        ad={selectedAd}
-                        onSuccess={() => {
-                            refetch();
-                            refetchBusiness();
-                            refetchBalance();
-                        }}
-                    />
-
-                    <EditModal isOpen={isEditAdModalOpen} onClose={() => { setIsEditAdModalOpen(false); setSelectedAd(null); }} ad={selectedAd} onSuccess={() => { refetch(); refetchBalance(); }} />
-                </>
+                <RefreshModal isOpen={isRefreshModalOpen} onClose={() => { setIsRefreshModalOpen(false); setSelectedAd(null); }} ad={selectedAd} onSuccess={() => { refetch(); refetchBalance(); }} />
             )}
+            {/* ✅ EditModal حذف شد */}
             <AppFooter activeTab="profile" />
         </div>
     );

@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 import {
     Package, Send, Edit2, MapPin, Clock,
     ArrowDown, ArrowLeft, ArrowRight, TrendingUp, Plus, Check,
-    Settings, Layers, ClipboardCheck, CreditCard, AlertTriangle,
+    Settings, Layers, ClipboardCheck, CreditCard, AlertTriangle, FileText,
 } from 'lucide-react';
 import { ArmLocationSelector } from '@/app/components/ArmLocationSelector';
 import { NumberInput } from "@/components/common";
@@ -79,6 +79,7 @@ export default function CreateAdPage() {
         validityHours: String(adValidityDefaultHours || 24),
         isAnonymous: false,
         isBumped: false,
+        description: '',
     });
 
     const [adImageFiles, setAdImageFiles] = useState<(File | null)[]>([null]);
@@ -345,6 +346,9 @@ export default function CreateAdPage() {
                 ? `${selectedCategoryData?.name || ''} ${formData.productType}`
                 : selectedCategoryData?.name || '';
 
+            // ============================================================
+            // ۳. ارسال description در handleSubmit
+            // ============================================================
             const ad = await createAdMutation.mutateAsync({
                 armSlug: currentSlug || 'barton',
                 categoryId: formData.categoryId,
@@ -361,6 +365,7 @@ export default function CreateAdPage() {
                 validityHours: parseInt(formData.validityHours),
                 isAnonymous: formData.isAnonymous,
                 isBumped: formData.isBumped,
+                description: formData.description, // ✅ اضافه شد
             });
 
             if (uploadedIds.length > 0 && ad?.id) {
@@ -585,13 +590,15 @@ export default function CreateAdPage() {
                     )}
 
                     {/* ═══════ مرحله ۳: موقعیت و زمان ═══════ */}
+
                     {currentStep === 3 && (
                         <div className="space-y-4 animate-in fade-in duration-200">
+                            {/* انتخاب محل */}
                             <div className="bg-white p-4 rounded-2xl border border-outline-variant/40 shadow-sm space-y-2.5">
                                 <label className="text-sm font-bold text-on-surface flex items-center gap-2">
-                                    <span className="w-7 h-7 rounded-lg bg-rose-100 flex items-center justify-center">
-                                        <MapPin className="w-3.5 h-3.5 text-rose-600" />
-                                    </span>
+                <span className="w-7 h-7 rounded-lg bg-rose-100 flex items-center justify-center">
+                    <MapPin className="w-3.5 h-3.5 text-rose-600" />
+                </span>
                                     محل کالا
                                     <span className="text-error text-xs">*</span>
                                 </label>
@@ -603,19 +610,23 @@ export default function CreateAdPage() {
                                 ) : (
                                     <button type="button" onClick={() => setIsLocationModalOpen(true)}
                                             className="w-full flex items-center justify-between p-3.5 border border-outline/60 bg-surface-container-lowest rounded-xl text-sm hover:border-primary/50 hover:ring-2 hover:ring-primary/10 transition-all">
-                                        <span className={formData.cityLabel ? "text-on-surface font-medium" : "text-on-surface-variant/50"}>
-                                            {formData.cityLabel || 'انتخاب شهر...'}
-                                        </span>
+                    <span className={formData.cityLabel ? "text-on-surface font-medium" : "text-on-surface-variant/50"}>
+                        {formData.cityLabel || 'انتخاب شهر...'}
+                    </span>
                                         <Edit2 className="w-4 h-4 text-primary/60" />
                                     </button>
                                 )}
                             </div>
 
+                            {/* ✅ فیلد توضیحات (اختیاری) — اضافه شد */}
+
+
+                            {/* مدت اعتبار */}
                             <div className="bg-white p-4 rounded-2xl border border-outline-variant/40 shadow-sm space-y-2.5">
                                 <label className="text-sm font-bold text-on-surface flex items-center gap-2">
-                                    <span className="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center">
-                                        <Clock className="w-3.5 h-3.5 text-blue-600" />
-                                    </span>
+                <span className="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center">
+                    <Clock className="w-3.5 h-3.5 text-blue-600" />
+                </span>
                                     مدت اعتبار قیمت
                                 </label>
                                 <div className="grid grid-cols-3 gap-2">
@@ -636,8 +647,30 @@ export default function CreateAdPage() {
                                     ))}
                                 </div>
                             </div>
+
+                            <div className="bg-white p-4 rounded-2xl border border-outline-variant/40 shadow-sm space-y-2.5">
+                                <label className="text-sm font-bold text-on-surface flex items-center gap-2">
+                <span className="w-7 h-7 rounded-lg bg-purple-100 flex items-center justify-center">
+                    <FileText className="w-3.5 h-3.5 text-purple-600" />
+                </span>
+                                    توضیحات
+                                    <span className="text-xs text-on-surface-variant/60 font-normal">(اختیاری)</span>
+                                </label>
+                                <textarea
+                                    value={formData.description}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                                    rows={3}
+                                    placeholder="توضیحات تکمیلی درباره کالا، شرایط فروش، کیفیت، برند و ..."
+                                    className="w-full bg-surface-container-lowest border border-outline/60 px-4 py-3 text-sm text-right placeholder:text-on-surface-variant/40 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none rounded-xl transition-all resize-none"
+                                />
+                                <p className="text-[10px] text-on-surface-variant/40 text-right">
+                                    {formData.description.length > 0 ? `${formData.description.length} کاراکتر` : 'می‌توانید توضیحات بیشتری اضافه کنید'}
+                                </p>
+                            </div>
                         </div>
                     )}
+
+
 
                     {/* ═══════ مرحله ۴: تنظیمات انتشار ═══════ */}
                     {currentStep === 4 && (

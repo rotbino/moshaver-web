@@ -273,7 +273,7 @@ export default function EditBusinessPage() {
                                         {isComplete ? 'پروفایل کامل است! 🎉' : 'تکمیل پروفایل کسب‌وکار'}
                                     </h2>
                                     <p className="text-xs text-on-surface-variant/70 dark:text-gray-500">
-                                        {isComplete ? 'کسب‌وکار شما آماده نمایش به خریداران و فروشندگان است' : `${100 - completionPercentage}٪ باقی مانده تا تکمیل پروفایل`}
+                                        {isComplete ? 'در هر زمان می توانید اطلاعات کسب و کار را به روز کنید' : `${100 - completionPercentage}٪ باقی مانده تا تکمیل پروفایل`}
                                     </p>
                                 </div>
                             </div>

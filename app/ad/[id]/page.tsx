@@ -493,7 +493,14 @@ export default function AdDetailPage() {
                         )}
                     </div>
                 </div>
+                {ad.description && (
+                    <div className="mt-8 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 shadow-sm">
 
+                        <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed text-justify whitespace-pre-wrap">
+                            {ad.description}
+                        </p>
+                    </div>
+                )}
                 {/* ═══════ تب‌ها ═══════ */}
                 <div className="mt-8 border-b border-gray-200 dark:border-gray-800">
                     <div className="flex flex-wrap gap-6">

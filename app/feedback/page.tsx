@@ -126,7 +126,7 @@ export default function FeedbackPage() {
                            به ما کمک کنید پلتفرم را بر اساس نیازهای واقعی شما بسازیم.
                         </h2>
                         <p className="text-xs text-on-surface-variant dark:text-gray-400 leading-relaxed">
-                           اگر پلتفرم امکانی که شما نیاز دارید را ندارد ،نیاز خود را در بخش نیازها ارسال کنید تا برسی و در صورت نیاز همگانی پیاده سازی شود. همچنین می توانید پیشنهاد، انتقاد یا مشکلات سیستم را ارسال کنید تا تا اولین فرصت رسیدگی شود.
+                           چه امکانی نیاز شمارا برطرف می کند؟ چه امکانی باعث افزایش فروش و درآمد شما می شود؟ چه امکانی می خواهید که در آپ وجود ندارد. پیشنهاد از شما پیاده سازی با ما . همچنین می توانید پیشنهاد، انتقاد یا مشکلات سیستم را ارسال کنید تا تا اولین فرصت رسیدگی شود.
                         </p>
                     </div>
                 </div>
@@ -151,10 +151,10 @@ export default function FeedbackPage() {
                                 onChange={(e) => setFormType(e.target.value)}
                                 className="h-9 px-3 border border-outline-variant dark:border-gray-700 bg-surface-container-lowest dark:bg-gray-800 text-on-surface dark:text-gray-200 rounded-lg text-sm"
                             >
-                                <option value="req">نیاز کسب و کار</option>
+                                <option value="req">نیاز کسب و کار من</option>
                                 <option value="suggestion">پیشنهاد</option>
                                 <option value="critique">انتقاد</option>
-                                <option value="bug">گزارش باگ</option>
+                                <option value="bug">گزارش خطای سیستم</option>
 
                             </select>
                             {parentId && (
@@ -165,7 +165,7 @@ export default function FeedbackPage() {
                             value={formContent}
                             onChange={(e) => setFormContent(e.target.value)}
                             placeholder="توضیحات خود را بنویسید..."
-                            className="w-full h-24 bg-surface-container-lowest dark:bg-gray-800 border border-outline-variant dark:border-gray-700 rounded-lg p-3 text-sm resize-none focus:ring-2 focus:ring-primary/20"
+                            className="w-full min-h-40 bg-surface-container-lowest dark:bg-gray-800 border border-outline-variant dark:border-gray-700 rounded-lg p-3 text-sm resize-none focus:ring-2 focus:ring-primary/20"
                         />
                         <div className="flex justify-end gap-2">
                             {parentId && (
@@ -180,6 +180,10 @@ export default function FeedbackPage() {
                 )}
 
                 {/* لیست بازخوردها */}
+                {items.length &&(
+                    <p className={"p-2"}>موارد ثبت شده.</p>
+                )}
+
                 {loading ? (
                     <div className="text-center py-12"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>
                 ) : items.length === 0 ? (

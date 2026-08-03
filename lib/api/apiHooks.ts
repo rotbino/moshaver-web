@@ -207,12 +207,15 @@ export const useCreateAd = () => {
     });
 };
 
+
 export const useVitrine = (slug: string, query: AdListQuery) => {
+    const queryKey = ['vitrine', slug, JSON.stringify(query)];
+
     return useQuery({
-        queryKey: ['vitrine', slug, query],
+        queryKey,
         queryFn: () => apiService.ad.getVitrine(slug, query),
         enabled: !!slug,
-        staleTime: 1000 * 30, // 30 ثانیه کش
+        staleTime: 1000 * 30,
     });
 };
 

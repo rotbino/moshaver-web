@@ -22,9 +22,9 @@ interface Props {
     onVolumeChange?: (value: number) => void;
     // ریست کردن چک‌باکس‌ها هنگام بازگشت
     onResetFilters?: () => void;
+    // ✅ لیست حجم‌های پویا از سرور
+    volumePresets?: number[];
 }
-
-const VOLUMES = [10, 50, 100, 500, 1000];
 
 export default function CategoryFilter({
                                            categoryTree,
@@ -35,6 +35,7 @@ export default function CategoryFilter({
                                            minQuantity = 0,
                                            onVolumeChange,
                                            onResetFilters,
+                                           volumePresets = [], // ✅ fallback خالی
                                        }: Props) {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -211,12 +212,12 @@ export default function CategoryFilter({
                             );
                         })}
 
-                        {/* دکمه‌های حجم (فقط برای برگ) */}
-                        {isLeaf && onVolumeChange && (
+                        {/* ✅ دکمه‌های حجم (فقط برای برگ) با استفاده از volumePresets */}
+                        {isLeaf && onVolumeChange && volumePresets.length > 0 && (
                             <>
                                 {/* جداکننده ظریف */}
                                 <div className="w-px h-6 bg-outline-variant/30 mx-0.5" />
-                                {VOLUMES.map((vol) => {
+                                {volumePresets.map((vol) => {
                                     const isActive = minQuantity === vol;
                                     return (
                                         <button

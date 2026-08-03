@@ -6,7 +6,7 @@ import {
     Clock, MapPin, Star, Verified, Lock,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import {useRouter} from "next/navigation";
+import { useRouter } from "next/navigation";
 
 interface AdCardProps {
     ad: any;
@@ -31,6 +31,31 @@ function getRelativeTime(date: string) {
     return `${diffDays} روز`;
 }
 
+// ─── برچسب نوع کسب‌وکار ───
+const BUSINESS_TYPE_LABELS: Record<string, string> = {
+    producer: 'تولیدی',
+    wholesaler: 'عمده‌فروش',
+    importer: 'واردکننده',
+    exporter: 'صادرکننده',
+    distributor: 'توزیع‌کننده',
+    retailer: 'خرده‌فروش',
+    contractor: 'پیمانکار',
+    service_provider: 'خدمات',
+    other: 'سایر',
+};
+
+const BUSINESS_TYPE_COLORS: Record<string, string> = {
+    producer: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+    wholesaler: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+    importer: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+    exporter: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+    distributor: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',
+    retailer: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400',
+    contractor: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+    service_provider: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
+    other: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400',
+};
+
 export default function AdCard({ ad, onContact, onDetail }: AdCardProps) {
     const unit = ad.unit?.shortCode || 'تن';
     const payment = ad.customFields?.paymentMethods;
@@ -54,14 +79,20 @@ export default function AdCard({ ad, onContact, onDetail }: AdCardProps) {
 
     const relativeTime = getRelativeTime(ad.updatedAt || ad.createdAt);
 
-    // ─── طرح موبایل (مطابق با طرح مرجع) ───
+    // ─── نوع کسب‌وکار ───
+    const businessType = ad.business?.type || '';
+    const typeLabel = BUSINESS_TYPE_LABELS[businessType] || '';
+    const typeColorClass = BUSINESS_TYPE_COLORS[businessType] || BUSINESS_TYPE_COLORS.other;
+
+
+    // ─── طرح موبایل ───
     const MobileLayout = () => (
         <div className="flex p-1 flex-row-reverse w-full bg-surface rounded-lg border border-gray-400 overflow-hidden premium-card-shadow transition-all duration-300 relative group">
             {/* تصویر */}
             <div className="w-24 h-28 sm:w-40 sm:h-40 flex-shrink-0 overflow-hidden bg-surface-container relative">
                 {ad.isBumped && (
-                    <div className="absolute  top-2 p-1 right-2 flex justify-center   gap-1 bg-error   rounded-full">
-                        <Star className="w-3 h-3   text-white" />
+                    <div className="absolute top-2 p-1 right-2 flex justify-center gap-1 bg-error rounded-full">
+                        <Star className="w-3 h-3 text-white" />
                     </div>
                 )}
                 <Image
@@ -85,7 +116,7 @@ export default function AdCard({ ad, onContact, onDetail }: AdCardProps) {
                     <h2 className="font-title-lg text-[15px] text-on-surface font-bold leading-tight line-clamp-2">
                         {ad.productType || ad.title}
                     </h2>
-                    <div className="flex items-center gap-1">
+                    <div className="flex flex-wrap items-center gap-1">
                         {ad.isAnonymous ? (
                             <span className="flex items-center gap-1 text-[10px] text-gray-500 dark:text-gray-400 font-medium">
                                 <Lock className="w-3 h-3" />
@@ -97,7 +128,16 @@ export default function AdCard({ ad, onContact, onDetail }: AdCardProps) {
                                     {ad.business?.name || 'فروشنده'}
                                 </span>
                                 {tier && tier !== 'none' && (
-                                    <Verified className={cn("w-4 h-4 ", tierColor)} />
+                                    <Verified className={cn("w-4 h-4", tierColor)} />
+                                )}
+                                {/* برچسب نوع کسب‌وکار در موبایل زیر نام */}
+                                {typeLabel && (
+                                    <span className={cn(
+                                        "inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-medium mt-0.5",
+                                        typeColorClass
+                                    )}>
+                                        {typeLabel}
+                                    </span>
                                 )}
                             </>
                         )}
@@ -125,7 +165,7 @@ export default function AdCard({ ad, onContact, onDetail }: AdCardProps) {
                         </div>
                         <div className="absolute top-2 left-2 flex justify-center px-2 gap-1 bg-primary backdrop-blur-sm py-0.5 rounded-full shadow-md border border-gray-200/50 dark:border-white/10">
                             <Clock className="w-3 h-3 text-surface-container-lowest" />
-                            <span className="text-surface-container-lowest  text-[10px] font-bold">{relativeTime}</span>
+                            <span className="text-surface-container-lowest text-[10px] font-bold">{relativeTime}</span>
                         </div>
                     </div>
                     <div className="flex gap-0.5">
@@ -141,9 +181,9 @@ export default function AdCard({ ad, onContact, onDetail }: AdCardProps) {
         </div>
     );
 
-    // ─── طرح دسکتاپ (مطابق با طرح مرجع) ───
+    // ─── طرح دسکتاپ ───
     const DesktopLayout = () => (
-        <div className="bg-surface-container-lowest  border border-outline-variant rounded-[4px] overflow-hidden premium-shadow card-hover transition-all duration-300 flex flex-col group  ">
+        <div className="bg-surface-container-lowest border border-outline-variant rounded-[4px] overflow-hidden premium-shadow card-hover transition-all duration-300  flex flex-col group">
             <div className="relative h-48 overflow-hidden">
                 <Image
                     src={imageUrl}
@@ -154,14 +194,14 @@ export default function AdCard({ ad, onContact, onDetail }: AdCardProps) {
                 />
 
                 {ad.isBumped && (
-                    <div className="absolute  top-2 p-1 right-2 flex justify-center   gap-1 bg-error   rounded-full">
-                        <Star className="w-3 h-3   text-white" />
+                    <div className="absolute top-2 p-1 right-2 flex justify-center gap-1 bg-error rounded-full">
+                        <Star className="w-3 h-3 text-white" />
                     </div>
                 )}
 
                 {hasInstallment && (
-                    <div className="absolute top-2 right-6 flex justify-center  px-2 gap-1 bg-error py-1  rounded-full">
-                        <Star className="w-3 h-3  text-white" />
+                    <div className="absolute top-2 right-6 flex justify-center px-2 gap-1 bg-error py-1 rounded-full">
+                        <Star className="w-3 h-3 text-white" />
                         <span className="bg-tertiary text-on-tertiary px-1 py-1 rounded-full text-[10px] font-bold shadow-md">اقساط</span>
                     </div>
                 )}
@@ -170,33 +210,44 @@ export default function AdCard({ ad, onContact, onDetail }: AdCardProps) {
                     <Clock className="w-3 h-3 text-blue-950 dark:text-primary-300" />
                     <span className="text-blue-950 dark:text-primary-300 text-[9px] font-bold">{relativeTime}</span>
                 </div>
-
             </div>
+
             <div className="p-3 flex-1 flex flex-col gap-1.5">
                 <div className="flex items-start justify-between">
-                    <h4 className="font-body-lg text-[15px] font-bold leading-tight line-clamp-2">
+                    <h4 className="font-body-lg text-[13px] font-bold leading-tight line-clamp-2 pb-1">
                         {ad.productType || ad.title}
                     </h4>
                     {!ad.isAnonymous && (
                         <Verified className={cn("w-5 h-5 -current", tierColor)} />
                     )}
                 </div>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 flex-wrap">
                     {ad.isAnonymous ? (
                         <span className="flex items-center gap-1 text-[10px] text-gray-500 dark:text-gray-400 font-medium">
                             <Lock className="w-3 h-3" />
                             انتشار ناشناس (فقط تماس)
                         </span>
                     ) : (
-                        <span className="font-label-md text-[12px] text-on-surface-variant">
-                            {ad.business?.name || 'فروشنده'}
-                        </span>
+                        <>
+                            <span className="font-label-md text-[12px] text-on-surface-variant">
+                                {ad.business?.name || 'فروشنده'}
+                            </span>
+                            {/* برچسب نوع کسب‌وکار در دسکتاپ کنار نام */}
+                            {typeLabel && (
+                                <span className={cn(
+                                    "inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium",
+                                    typeColorClass
+                                )}>
+                                    {typeLabel}
+                                </span>
+                            )}
+                        </>
                     )}
                 </div>
-                <div className="mt-auto  pt-2 flex items-end justify-between border-t border-outline-variant/30">
-                    <div className="flex flex-1 items-center  justify-between">
-                        <span className="font-label-md text-[11px] text-outline">قیمت هر {unit}:</span>
-                        <span className="font-title-lg text-[18px] text-primary font-bold">
+                <div className="mt-auto pt-2 flex items-end justify-between border-t border-outline-variant/30">
+                    <div className="flex flex-1 items-center justify-between">
+                        <span className="font-label-md text-[11px] text-outline">هر {unit}:</span>
+                        <span className="font-title-lg text-[14px] text-primary font-bold">
                             {formatNum(ad.unitPrice)} <span className="text-[13px] font-normal">تومان</span>
                         </span>
                     </div>
@@ -207,11 +258,9 @@ export default function AdCard({ ad, onContact, onDetail }: AdCardProps) {
             </div>
             <div className="bg-surface-container p-2 flex justify-between items-center px-3 border-t border-outline-variant">
                 <div className="flex items-center gap-1 text-on-surface-variant">
-                    <span className="material-symbols-outlined text-sm">inventory_2</span>
                     <span className="font-label-md text-[10px]">موجودی: {ad.availableQuantity ? `${formatNum(ad.availableQuantity)} ${unit}` : 'موجود'}</span>
                 </div>
                 <div className="flex items-center gap-1 text-on-surface-variant">
-                    <span className="material-symbols-outlined text-sm">shopping_cart_checkout</span>
                     <span className="font-label-md text-[10px]">حداقل: {formatNum(ad.minQuantity)} {unit}</span>
                 </div>
             </div>
@@ -230,7 +279,8 @@ export default function AdCard({ ad, onContact, onDetail }: AdCardProps) {
     return (
         <div
             onClick={handleCardClick}
-            className="cursor-pointer">
+            className="cursor-pointer"
+        >
             <div className="block md:hidden">
                 <MobileLayout />
             </div>
