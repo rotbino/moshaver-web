@@ -172,7 +172,8 @@ export default function ArmAdminSettings() {
         );
     }
 
-    const showSaveButton = ['general', 'economy', 'payment', 'labels'].includes(activeTab);
+    // ✅ اضافه کردن 'modules' به لیست تب‌های دارای دکمه ذخیره
+    const showSaveButton = ['general', 'modules', 'economy', 'payment', 'labels'].includes(activeTab);
 
     return (
         <div className="space-y-6 pb-20">
@@ -217,7 +218,7 @@ export default function ArmAdminSettings() {
             </div>
 
             {/* محتوای تب‌ها */}
-            <div className="bg-white  rounded-xl border border-outline-variant/20 dark:border-gray-800 p-4 sm:p-6">
+            <div className="bg-white dark:bg-gray-900 rounded-xl border border-outline-variant/20 dark:border-gray-800 p-4 sm:p-6">
                 {activeTab === 'general' && (
                     <GeneralSection
                         register={register}
@@ -299,7 +300,7 @@ export default function ArmAdminSettings() {
 
                 {activeTab === 'industries' && (
                     <IndustrySelector
-                        register={register} // ✅ حتماً register را پاس دهید
+                        register={register}
                         watch={watch}
                         setValue={setValue}
                         isAdmin={isSystemAdmin}
@@ -308,7 +309,7 @@ export default function ArmAdminSettings() {
 
                 {activeTab === 'locations' && (
                     <LocationSelector
-                        control={control} // ✅ control را پاس دهید
+                        control={control}
                         watch={watch}
                         setValue={setValue}
                         onSave={() => {}}

@@ -7,7 +7,7 @@ import Image from 'next/image';
 import {
     PlusCircle, Package, Pencil, Clock, TrendingUp, X, ClipboardList,
     Power, PowerOff, AlertCircle, Archive, RefreshCw, Trash2,
-    ChevronDown, ChevronUp
+    ChevronDown, ChevronUp, AlertTriangle, XCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useBulkUpdateAd } from '@/lib/api/apiHooks';
@@ -21,6 +21,8 @@ interface AdsListProps {
     totalAds: number;
     activeAds: number;
     expiredAds: number;
+    pendingAds?: number;
+    rejectedAds?: number;
     businessId?: string;
     onRefreshClick: (ad: any) => void;
     onEditClick: (ad: any) => void;
@@ -49,10 +51,10 @@ const CURRENCY_MAP: Record<string, string> = {
     IRR: 'تومان', IRR1: 'ریال', USD: 'دلار', EUR: 'یورو',
 };
 
-type TabType = 'active' | 'inactive' | 'expired';
+type TabType = 'active' | 'inactive' | 'expired' | 'pending' | 'rejected';
 
 export default function AdsList({
-                                    ads, totalAds, activeAds, expiredAds,
+                                    ads, totalAds, activeAds, expiredAds, pendingAds = 0, rejectedAds = 0,
                                     businessId,
                                     onRefreshClick, onEditClick, onRepublishClick,
                                     onToggleActive,
@@ -76,7 +78,7 @@ export default function AdsList({
     const [deleteConfirm, setDeleteConfirm] = useState<{ ad: any; open: boolean }>({ ad: null, open: false });
     const [deactivateConfirm, setDeactivateConfirm] = useState<{ ad: any; open: boolean }>({ ad: null, open: false });
 
-    // تفکیک آگهی‌ها به سه دسته
+    // تفکیک آگهی‌ها
     const activeAdsList = useMemo(() =>
             ads.filter(ad => !isAdExpired(ad) && ad.status === 'active'),
         [ads]
@@ -92,16 +94,29 @@ export default function AdsList({
         [ads]
     );
 
+    const pendingAdsList = useMemo(() =>
+            ads.filter(ad => ad.status === 'pending'),
+        [ads]
+    );
+
+    const rejectedAdsList = useMemo(() =>
+            ads.filter(ad => ad.status === 'rejected'),
+        [ads]
+    );
+
     const reallyActiveCount = activeAdsList.length;
-    const currentList = activeTab === 'active' ? activeAdsList : activeTab === 'inactive' ? inactiveAdsList : expiredAdsList;
+    const currentList = activeTab === 'active' ? activeAdsList :
+        activeTab === 'inactive' ? inactiveAdsList :
+            activeTab === 'expired' ? expiredAdsList :
+                activeTab === 'pending' ? pendingAdsList :
+                    rejectedAdsList;
 
     const openGroupEdit = () => {
-        if (activeTab === 'expired') {
+        if (activeTab === 'expired' || activeTab === 'pending' || activeTab === 'rejected') {
             toast.info('ویرایش گروهی فقط برای آگهی‌های فعال امکان‌پذیر است.');
             return;
         }
         const initial: Record<string, string> = {};
-        // فقط آگهی‌های فعال واقعی (نه منقضی)
         const targetAds = activeAdsList;
         targetAds.forEach(ad => { initial[ad.id] = ad.unitPrice?.toString() || ''; });
         setPriceChanges(initial);
@@ -175,58 +190,88 @@ export default function AdsList({
         );
     }
 
-    // محاسبه تعداد آگهی‌های فعال واقعی (نه منقضی و نه غیرفعال)
     const availableSlots = maxActiveAds - reallyActiveCount;
 
     return (
         <>
             <div>
                 {/* هدر ابزار */}
-                {/* هدر ابزار - واکنش‌گرا برای موبایل */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0 mb-4 bg-surface-container-lowest dark:bg-gray-800/50 border border-outline-variant/20 dark:border-gray-700 rounded-lg px-3 py-2">
-                    {/* ردیف اول: اطلاعات و وضعیت سهمیه */}
                     <div className="flex flex-wrap items-center gap-2">
                         <h3 className="text-[12px] font-semibold text-on-surface dark:text-gray-200 flex items-center gap-1.5">
                             آگهی‌های من
                             <span className="text-[10px] font-normal text-on-surface-variant/60">
-                ({reallyActiveCount}/{maxActiveAds} فعال)
-            </span>
+                                ({reallyActiveCount}/{maxActiveAds} فعال)
+                            </span>
                         </h3>
                         {reallyActiveCount >= maxActiveAds && (
                             <span className="flex items-center gap-1 text-[9px] text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-1.5 py-0.5 rounded-full whitespace-nowrap">
-                <AlertCircle className="w-3 h-3" />
-                سهمیه پر است
-            </span>
+                                <AlertCircle className="w-3 h-3" />
+                                سهمیه پر است
+                            </span>
                         )}
-                        {availableSlots > 0 && (
-                            <span className="text-[9px] text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-1.5 py-0.5 rounded-full whitespace-nowrap">
-                {availableSlots} جایگاه خالی
-            </span>
+                        {pendingAdsList.length > 0 && (
+                            <span className="flex items-center gap-1 text-[9px] text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                                <Clock className="w-3 h-3" />
+                                {pendingAdsList.length} در انتظار تایید
+                            </span>
+                        )}
+                        {rejectedAdsList.length > 0 && (
+                            <span className="flex items-center gap-1 text-[9px] text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                                <XCircle className="w-3 h-3" />
+                                {rejectedAdsList.length} رد شده
+                            </span>
                         )}
                     </div>
 
-                    {/* ردیف دوم: دکمه‌ها */}
                     <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap">
-                        {activeTab !== 'expired' && currentList.length > 0 && (
+                        {activeTab === 'active' && activeAdsList.length > 0 && (
                             <button onClick={openGroupEdit} className="h-7 sm:h-8 px-2 sm:px-3 bg-primary text-on-primary text-[10px] sm:text-xs rounded-md hover:bg-primary/90 transition-colors flex items-center gap-1 font-medium shadow-sm whitespace-nowrap">
                                 <ClipboardList className="w-3.5 h-3.5" />
                                 <span className="">آپدیت گروهی</span>
-
                             </button>
                         )}
-                        <button onClick={() => router.push('/ad/create')} className="h-7 sm:h-8 px-2 sm:px-3 bg-primary text-on-primary text-[10px] sm:text-xs rounded-md hover:bg-primary/90 transition-colors flex items-center gap-1 font-medium shadow-sm whitespace-nowrap">
+                        <button onClick={() => router.push('/ad/create')} className="h-7 sm:h-8 px-2 sm:px-3 bg-gray-900 dark:bg-gray-200 text-white dark:text-gray-900 text-[10px] sm:text-xs rounded-md hover:bg-gray-800 dark:hover:bg-gray-300 transition-colors flex items-center gap-1 font-medium shadow-sm whitespace-nowrap">
                             <PlusCircle className="w-3.5 h-3.5" />
-                            <span className="">جدید</span>
-                                                   </button>
+                            <span className="">آگهی جدید</span>
+                        </button>
                     </div>
                 </div>
 
                 {/* تب‌ها */}
-                <div className="flex border-b border-outline-variant/30 dark:border-gray-700 mb-4">
+                <div className="flex border-b border-outline-variant/30 dark:border-gray-700 mb-4 overflow-x-auto">
+                    {pendingAdsList.length > 0 && (
+                        <button
+                            onClick={() => setActiveTab('pending')}
+                            className={cn(
+                                "px-4 py-2 text-sm font-medium transition-colors border-b-2 whitespace-nowrap",
+                                activeTab === 'pending'
+                                    ? "border-blue-500 text-blue-600"
+                                    : "border-transparent text-on-surface-variant hover:text-on-surface dark:hover:text-gray-300"
+                            )}
+                        >
+                            در انتظار تایید
+                            <span className="mr-1.5 px-2 py-0.5 bg-blue-500/10 text-blue-600 rounded-full text-[10px]">{pendingAdsList.length}</span>
+                        </button>
+                    )}
+                    {rejectedAdsList.length > 0 && (
+                        <button
+                            onClick={() => setActiveTab('rejected')}
+                            className={cn(
+                                "px-4 py-2 text-sm font-medium transition-colors border-b-2 whitespace-nowrap",
+                                activeTab === 'rejected'
+                                    ? "border-red-500 text-red-600"
+                                    : "border-transparent text-on-surface-variant hover:text-on-surface dark:hover:text-gray-300"
+                            )}
+                        >
+                            رد شده
+                            <span className="mr-1.5 px-2 py-0.5 bg-red-500/10 text-red-600 rounded-full text-[10px]">{rejectedAdsList.length}</span>
+                        </button>
+                    )}
                     <button
                         onClick={() => setActiveTab('active')}
                         className={cn(
-                            "px-4 py-2 text-sm font-medium transition-colors border-b-2",
+                            "px-4 py-2 text-sm font-medium transition-colors border-b-2 whitespace-nowrap",
                             activeTab === 'active'
                                 ? "border-primary text-primary"
                                 : "border-transparent text-on-surface-variant hover:text-on-surface dark:hover:text-gray-300"
@@ -238,7 +283,7 @@ export default function AdsList({
                     <button
                         onClick={() => setActiveTab('inactive')}
                         className={cn(
-                            "px-4 py-2 text-sm font-medium transition-colors border-b-2",
+                            "px-4 py-2 text-sm font-medium transition-colors border-b-2 whitespace-nowrap",
                             activeTab === 'inactive'
                                 ? "border-primary text-primary"
                                 : "border-transparent text-on-surface-variant hover:text-on-surface dark:hover:text-gray-300"
@@ -250,7 +295,7 @@ export default function AdsList({
                     <button
                         onClick={() => setActiveTab('expired')}
                         className={cn(
-                            "px-4 py-2 text-sm font-medium transition-colors border-b-2",
+                            "px-4 py-2 text-sm font-medium transition-colors border-b-2 whitespace-nowrap",
                             activeTab === 'expired'
                                 ? "border-primary text-primary"
                                 : "border-transparent text-on-surface-variant hover:text-on-surface dark:hover:text-gray-300"
@@ -268,6 +313,8 @@ export default function AdsList({
                             {activeTab === 'active' && 'هیچ آگهی فعالی وجود ندارد.'}
                             {activeTab === 'inactive' && 'هیچ آگهی غیرفعالی وجود ندارد.'}
                             {activeTab === 'expired' && 'هیچ آگهی منقضی شده‌ای وجود ندارد.'}
+                            {activeTab === 'pending' && 'هیچ آگهی در انتظار تاییدی وجود ندارد.'}
+                            {activeTab === 'rejected' && 'هیچ آگهی رد شده‌ای وجود ندارد.'}
                         </div>
                     )}
                     {currentList.map((ad: any) => {
@@ -282,7 +329,168 @@ export default function AdsList({
                         const expired = isAdExpired(ad);
                         const isActive = ad.status === 'active' && !expired;
                         const isInactive = ad.status === 'inactive' && !expired;
+                        const isPending = ad.status === 'pending';
+                        const isRejected = ad.status === 'rejected';
 
+                        // ============================================================
+                        // آگهی در انتظار تایید
+                        // ============================================================
+                        if (isPending) {
+                            return (
+                                <div
+                                    key={ad.id}
+                                    className="bg-blue-50/50 dark:bg-blue-900/10 border-blue-200/60 dark:border-blue-800/30 rounded-lg p-4"
+                                >
+                                    <div className="flex items-start gap-3">
+                                        <div className="relative w-14 h-14 rounded-md overflow-hidden bg-surface-container-high dark:bg-gray-800 flex-shrink-0">
+                                            <Image
+                                                src={imageUrl}
+                                                alt={productType}
+                                                fill
+                                                className="object-contain p-1"
+                                                sizes="56px"
+                                                unoptimized
+                                            />
+                                            <div className="absolute inset-0 bg-blue-500/20 flex items-center justify-center">
+                                                <span className="text-[8px] font-bold text-blue-700 bg-blue-100/80 px-1.5 py-0.5 rounded">در انتظار تایید</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <h4 className="font-semibold text-sm sm:text-base text-on-surface dark:text-gray-100 truncate">
+                                                    {productType}
+                                                </h4>
+                                                {category && (
+                                                    <span className="text-[10px] bg-surface-container-high dark:bg-gray-800 text-on-surface-variant dark:text-gray-400 px-1.5 py-0.5 rounded-full">
+                                                        {category}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center gap-x-3 gap-y-1 mt-1.5 text-xs text-on-surface-variant dark:text-gray-400 flex-wrap">
+                                                <span className="flex items-center gap-1">
+                                                    <Package className="w-3.5 h-3.5 text-primary/70" />
+                                                    حداقل {ad.minQuantity} {unit}
+                                                </span>
+                                                <span className="flex items-center gap-1">
+                                                    <Clock className="w-3.5 h-3.5" />
+                                                    {remaining}
+                                                </span>
+                                                <span className="font-bold text-sm ml-auto text-primary">
+                                                    {ad.unitPrice.toLocaleString()}
+                                                    <span className="text-[10px] font-normal text-on-surface-variant mr-1">ت/{unit}</span>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* اکشن‌ها */}
+                                    <div className="flex items-center justify-end gap-2 mt-3 pt-3 border-t border-outline-variant/10 dark:border-gray-800">
+                                        <button onClick={() => router.push(`/ad/reedit/${ad.id}`)} className="p-1.5 border border-outline dark:border-gray-600 text-on-surface dark:text-gray-300 rounded-md hover:bg-surface-container-low transition-colors">
+                                            <Pencil className="w-3.5 h-3.5" />
+                                        </button>
+                                        <button
+                                            onClick={() => handleDeleteConfirm(ad)}
+                                            className="p-1.5 border border-outline dark:border-gray-600 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
+                                            title="حذف آگهی"
+                                        >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        }
+
+                        // ============================================================
+                        // آگهی رد شده
+                        // ============================================================
+                        if (isRejected) {
+                            return (
+                                <div
+                                    key={ad.id}
+                                    className="bg-red-50/50 dark:bg-red-900/10 border-red-200/60 dark:border-red-800/30 rounded-lg p-4"
+                                >
+                                    <div className="flex items-start gap-3">
+                                        <div className="relative w-14 h-14 rounded-md overflow-hidden bg-surface-container-high dark:bg-gray-800 flex-shrink-0">
+                                            <Image
+                                                src={imageUrl}
+                                                alt={productType}
+                                                fill
+                                                className="object-contain p-1"
+                                                sizes="56px"
+                                                unoptimized
+                                            />
+                                            <div className="absolute inset-0 bg-red-500/20 flex items-center justify-center">
+                                                <span className="text-[8px] font-bold text-red-700 bg-red-100/80 px-1.5 py-0.5 rounded">رد شده</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <h4 className="font-semibold text-sm sm:text-base text-on-surface dark:text-gray-100 truncate">
+                                                    {productType}
+                                                </h4>
+                                                {category && (
+                                                    <span className="text-[10px] bg-surface-container-high dark:bg-gray-800 text-on-surface-variant dark:text-gray-400 px-1.5 py-0.5 rounded-full">
+                                                        {category}
+                                                    </span>
+                                                )}
+                                                <span className="text-[9px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full flex items-center gap-1">
+                                                    <AlertTriangle className="w-3 h-3" />
+                                                    رد شده
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-x-3 gap-y-1 mt-1.5 text-xs text-on-surface-variant dark:text-gray-400 flex-wrap">
+                                                <span className="flex items-center gap-1">
+                                                    <Package className="w-3.5 h-3.5 text-primary/70" />
+                                                    حداقل {ad.minQuantity} {unit}
+                                                </span>
+                                                <span className="flex items-center gap-1">
+                                                    <Clock className="w-3.5 h-3.5" />
+                                                    {remaining}
+                                                </span>
+                                                <span className="font-bold text-sm ml-auto text-primary">
+                                                    {ad.unitPrice.toLocaleString()}
+                                                    <span className="text-[10px] font-normal text-on-surface-variant mr-1">ت/{unit}</span>
+                                                </span>
+                                            </div>
+
+                                            {/* نمایش دلیل رد */}
+                                            {ad.rejectionReason && (
+                                                <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/30 rounded-md text-xs text-red-700 dark:text-red-300 flex items-start gap-2">
+                                                    <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                                                    <div>
+                                                        <span className="font-medium">دلیل رد:</span>
+                                                        <span className="mr-1">{ad.rejectionReason}</span>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* اکشن‌ها */}
+                                    <div className="flex items-center justify-end gap-2 mt-3 pt-3 border-t border-outline-variant/10 dark:border-gray-800">
+                                        <button
+                                            onClick={() => router.push(`/ad/reedit/${ad.id}`)}
+                                            className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-[11px] rounded-md font-medium transition-colors flex items-center gap-1"
+                                        >
+                                            <RefreshCw className="w-3 h-3" />
+                                            رفع مشکل
+                                        </button>
+
+                                        <button
+                                            onClick={() => handleDeleteConfirm(ad)}
+                                            className="p-1.5 border border-outline dark:border-gray-600 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
+                                            title="حذف آگهی"
+                                        >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        }
+
+                        // ============================================================
+                        // آگهی‌های عادی (فعال، غیرفعال، منقضی)
+                        // ============================================================
                         return (
                             <div
                                 key={ad.id}
@@ -305,7 +513,6 @@ export default function AdsList({
                                             sizes="56px"
                                             unoptimized
                                         />
-                                        {/* برچسب وضعیت */}
                                         {expired && (
                                             <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
                                                 <span className="text-[8px] font-bold text-white bg-red-600/80 px-1.5 py-0.5 rounded">منقضی</span>
@@ -331,7 +538,7 @@ export default function AdsList({
                                                 </span>
                                             )}
                                             {ad.isBumped && !expired && (
-                                                <TrendingUp className="w-3.5 h-3.5 text-red-500 dark:text-red-400 flex-shrink-0" title="نردبان" />
+                                                <TrendingUp className="w-3.5 h-3.5 text-red-500 dark:text-red-400 flex-shrink-0"  />
                                             )}
                                         </div>
                                         <div className="flex items-center gap-x-3 gap-y-1 mt-1.5 text-xs text-on-surface-variant dark:text-gray-400 flex-wrap">
@@ -356,7 +563,6 @@ export default function AdsList({
 
                                 {/* اکشن‌ها */}
                                 <div className="flex items-center justify-end gap-2 mt-3 pt-3 border-t border-outline-variant/10 dark:border-gray-800">
-                                    {/* دکمه آپدیت (تمدید/ورود به تابلو) برای همه */}
                                     <button
                                         onClick={() => {
                                             if (expired || isInactive) {
@@ -368,28 +574,24 @@ export default function AdsList({
                                         className="px-3 py-1.5 bg-[#1e293b] dark:bg-[#e2e8f0] text-white dark:text-[#0f172a] text-[11px] rounded-md font-medium hover:opacity-80 transition-opacity flex items-center gap-1"
                                     >
                                         <RefreshCw className="w-3 h-3" />
-                                        تمدید
+                                        {expired || isInactive ? 'تمدید' : 'تمدید'}
                                     </button>
 
-                                    {/* دکمه ویرایش برای همه */}
                                     <button onClick={() => onEditClick(ad)} className="p-1.5 border border-outline dark:border-gray-600 text-on-surface dark:text-gray-300 rounded-md hover:bg-surface-container-low transition-colors">
                                         <Pencil className="w-3.5 h-3.5" />
                                     </button>
 
-                                    {/* دکمه‌های فعال/غیرفعال (جایگزین سویچر) */}
                                     {!expired && onToggleActive && (
                                         <>
                                             {isActive ? (
-                                                // آگهی فعال → دکمه غیرفعال با تأیید
                                                 <button
                                                     onClick={() => handleDeactivateConfirm(ad)}
                                                     className="px-3 py-1.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-700 rounded-md text-[11px] font-medium hover:bg-amber-200 dark:hover:bg-amber-800/40 transition-colors flex items-center gap-1"
                                                 >
                                                     <PowerOff className="w-3.5 h-3.5" />
-
+                                                    غیرفعال
                                                 </button>
                                             ) : (
-                                                // آگهی غیرفعال → دکمه فعال (بدون تأیید)
                                                 <button
                                                     onClick={() => onToggleActive(ad)}
                                                     className="px-3 py-1.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-700 rounded-md text-[11px] font-medium hover:bg-emerald-200 dark:hover:bg-emerald-800/40 transition-colors flex items-center gap-1"
@@ -401,7 +603,6 @@ export default function AdsList({
                                         </>
                                     )}
 
-                                    {/* دکمه حذف برای همه */}
                                     <button
                                         onClick={() => handleDeleteConfirm(ad)}
                                         className="p-1.5 border border-outline dark:border-gray-600 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
@@ -411,7 +612,7 @@ export default function AdsList({
                                     </button>
                                 </div>
 
-                                {/* هشدارها (در صورت نیاز) */}
+                                {/* هشدارها */}
                                 {(isInactive || expired) && reallyActiveCount >= maxActiveAds && (
                                     <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/30 rounded-md text-[10px] text-blue-700 dark:text-blue-300 flex items-center gap-2 flex-wrap">
                                         <AlertCircle className="w-3.5 h-3.5 shrink-0" />
@@ -449,7 +650,7 @@ export default function AdsList({
                 </div>
             </div>
 
-            {/* مودال تأیید حذف */}
+            {/* مودال‌ها */}
             {deleteConfirm.open && (
                 <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 p-4">
                     <div className="bg-white dark:bg-gray-900 w-full max-w-md rounded-md border border-outline-variant/20 dark:border-gray-800 shadow-lg p-6">
@@ -481,7 +682,6 @@ export default function AdsList({
                 </div>
             )}
 
-            {/* مودال تأیید غیرفعال‌سازی */}
             {deactivateConfirm.open && (
                 <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 p-4">
                     <div className="bg-white dark:bg-gray-900 w-full max-w-md rounded-md border border-outline-variant/20 dark:border-gray-800 shadow-lg p-6">
@@ -515,18 +715,17 @@ export default function AdsList({
                 </div>
             )}
 
-            {/* مودال تغییر قیمت گروهی */}
             {groupEditOpen && (
                 <div className="fixed inset-0 z-[70] flex flex-col justify-end sm:items-center sm:justify-center bg-black/50">
                     <div className="bg-white dark:bg-gray-900 w-full sm:max-w-lg rounded-t-2xl sm:rounded-md border border-outline-variant/20 dark:border-gray-800 shadow-lg max-h-[90vh] flex flex-col">
                         <div className="flex items-center justify-between px-4 py-3 border-b border-outline-variant/20 dark:border-gray-800">
-                            <h3 className="text-base font-bold text-on-surface dark:text-gray-100">تغییر قیمت گروهی  سریع</h3>
+                            <h3 className="text-base font-bold text-on-surface dark:text-gray-100">تغییر قیمت گروهی</h3>
                             <button onClick={() => setGroupEditOpen(false)} className="p-1 hover:bg-surface-container-high rounded-md">
                                 <X className="w-5 h-5 text-on-surface-variant" />
                             </button>
                         </div>
                         <div className="overflow-y-auto p-4 space-y-3">
-                            {currentList.map(ad => {
+                            {activeAdsList.map(ad => {
                                 const unit = ad.unit?.shortCode || 'تن';
                                 return (
                                     <div key={ad.id} className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">

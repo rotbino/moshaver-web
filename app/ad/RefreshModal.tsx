@@ -20,6 +20,7 @@ interface RefreshModalProps {
         minQuantity: number;
         expiresAt: string;
         isBumped?: boolean;
+        bumpExpiresAt?: string; // ✅ اضافه شد
     };
     onSuccess?: () => void;
 }
@@ -45,6 +46,12 @@ export function RefreshModal({ isOpen, onClose, ad, onSuccess }: RefreshModalPro
 
     // بررسی اینکه آیا آگهی از قبل نردبان دارد
     const alreadyBumped = ad.isBumped === true;
+
+    // فرمت‌دهی تاریخ و ساعت پایان نردبان (در صورت وجود)
+    const bumpExpiresAt = ad.bumpExpiresAt ? new Date(ad.bumpExpiresAt) : null;
+    const bumpExpiresAtLabel = bumpExpiresAt
+        ? `${bumpExpiresAt.toLocaleDateString('fa-IR')} ساعت ${bumpExpiresAt.toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' })}`
+        : null;
 
     const handleConfirm = async () => {
         try {
@@ -81,8 +88,7 @@ export function RefreshModal({ isOpen, onClose, ad, onSuccess }: RefreshModalPro
                 {/* Header */}
                 <div className="flex items-center justify-between px-5 py-3.5 border-b border-outline-variant/20 dark:border-gray-800">
                     <div>
-                        <h3 className="text-[10px] font-bold text-primary dark:text-primary-400">تمدید سریع قیمت قبلی و صعود به بالای لیست  </h3>
-
+                        <h3 className="text-[10px] font-bold text-primary dark:text-primary-400">تمدید سریع قیمت قبلی و صعود به بالای لیست</h3>
                     </div>
 
                     <button
@@ -129,11 +135,18 @@ export function RefreshModal({ isOpen, onClose, ad, onSuccess }: RefreshModalPro
                             </div>
                         </div>
 
-                        {/* Bump Section - اصلاح شده با چیدمان درست و ارتفاع کمتر */}
+                        {/* Bump Section - نمایش تاریخ و ساعت نردبان در صورت وجود */}
                         {alreadyBumped ? (
-                            <div className="flex items-center gap-2 p-2.5 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/30 rounded-lg">
-                                <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" />
-                                <span className="text-sm font-medium text-green-700 dark:text-green-300">نردبان فعال است</span>
+                            <div className="flex items-start gap-2 p-2.5 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/30 rounded-lg">
+                                <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                                <div>
+                                    <span className="text-sm font-medium text-green-700 dark:text-green-300">نردبان فعال است</span>
+                                    {bumpExpiresAtLabel && (
+                                        <p className="text-xs text-green-600/80 dark:text-green-400/80 mt-0.5">
+                                            تا تاریخ <span className="font-medium">{bumpExpiresAtLabel}</span>
+                                        </p>
+                                    )}
+                                </div>
                             </div>
                         ) : (
                             <label className="flex items-center gap-2 p-2.5 bg-primary/5 dark:bg-primary/10 border border-primary/20 dark:border-primary/30 rounded-lg cursor-pointer hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors">

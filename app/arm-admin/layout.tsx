@@ -17,7 +17,7 @@ import {
     X,
     Home,
     LogOut,
-    Store,
+    Store, Package,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiService } from '@/lib/api/apiService';
@@ -26,6 +26,7 @@ import { cn } from '@/lib/utils';
 
 const menuItems = [
     { href: '/arm-admin', label: 'داشبورد', icon: LayoutDashboard, exact: true },
+    { href: '/arm-admin/ads', label: 'مدیریت آگهی‌ها', icon: Package },
     { href: '/arm-admin/members', label: 'مدیریت اعضا', icon: Users },
     { href: '/arm-admin/settings', label: 'تنظیمات بازار', icon: Settings },
     { href: '/arm-admin/financial', label: 'مالی', icon: CreditCard },

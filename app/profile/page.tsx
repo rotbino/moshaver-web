@@ -165,7 +165,7 @@ export default function ProfilePage() {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-surface via-surface to-surface-container-low/30 dark:from-gray-950 dark:via-gray-950 dark:to-gray-900/30">
-            <AppHeader showBack={false} />
+            <AppHeader showBack={false} fixed={true} />
             <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-24">
                 {hasTemporaryPassword && (
                     <div className="bg-error/5 border-2 border-error shadow-lg rounded-2xl p-5 mb-6 flex flex-col sm:flex-row items-center justify-between gap-4 animate-pulse">

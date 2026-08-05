@@ -77,15 +77,16 @@ export default function DesktopHeader({ showLocation = false, showBack = true, f
     const logoUrl = (currentArm as any)?.config?.general?.logoUrl || currentArm?.logoUrl;
     const logoSrc = logoFileId ? `${API_BASE}/file/${logoFileId}` : logoUrl || '/images/logo.png';
 
-    // ✅ تصویر پروفایل کاربر (همانند ProfileHeader)
     const fullName = user?.fullName || 'کاربر';
     const avatarSrc = user?.avatarFile?.id ? getApiUrl(`/file/${user.avatarFile.id}/thumbnail`) : null;
 
     const showJoin = isHomePage && (!isAuthenticated || !isMember) && !armsLoading;
 
     return (
-        <header className="bg-white dark:bg-gray-900 border-b border-outline-variant/20">
+        // ✅ تغییر اصلی: اضافه کردن شرط fixed و کلاس‌های position
+        <header className={`hidden lg:block bg-white dark:bg-gray-900 border-b border-outline-variant/20 ${fixed ? 'sticky top-0 left-0 right-0 z-50 w-full' : ''}`}>
             <div className="flex items-center justify-between px-6 lg:px-8 h-[80px]">
+                {/* ... (بقیه محتوا بدون تغییر) ... */}
                 <div className="flex items-center gap-4">
                     <div className="w-11 h-11 cursor-pointer relative rounded-xl overflow-hidden flex-shrink-0 hover:opacity-80 transition-opacity" onClick={() => router.push('/')}>
                         <Image src={logoSrc} alt="Logo" fill className="object-contain" unoptimized={logoSrc.startsWith('http')} sizes="44px" />
@@ -110,8 +111,6 @@ export default function DesktopHeader({ showLocation = false, showBack = true, f
                         <Plus className="w-4 h-4" /> ثبت قیمت
                     </button>
                     <ThemeToggle />
-
-                    {/* دکمه پروفایل با تصویر کاربر */}
                     <button
                         onClick={() => router.push('/profile')}
                         className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-900 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
@@ -119,24 +118,11 @@ export default function DesktopHeader({ showLocation = false, showBack = true, f
                     >
                         {avatarSrc ? (
                             <div className="w-9 h-9 rounded-full overflow-hidden border border-gray-200 dark:border-gray-700 flex-shrink-0">
-                                <Image
-                                    src={avatarSrc}
-                                    alt={fullName}
-                                    width={32}
-                                    height={32}
-                                    className="w-full h-full object-cover"
-                                    unoptimized={avatarSrc.startsWith('http')}
-                                />
+                                <Image src={avatarSrc} alt={fullName} width={32} height={32} className="w-full h-full object-cover" unoptimized={avatarSrc.startsWith('http')} />
                             </div>
                         ) : (
                             <div className="w-9 h-9 rounded-full overflow-hidden border border-gray-200 dark:border-gray-700 flex-shrink-0 bg-gray-100 dark:bg-gray-800">
-                                <Image
-                                    src="/images/no_profile_image.jpg"
-                                    alt="بدون تصویر"
-                                    width={32}
-                                    height={32}
-                                    className="w-full h-full object-cover"
-                                />
+                                <Image src="/images/no_profile_image.jpg" alt="بدون تصویر" width={32} height={32} className="w-full h-full object-cover" />
                             </div>
                         )}
                     </button>

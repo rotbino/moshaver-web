@@ -533,6 +533,21 @@ export const apiService = {
         getCategoryUnits: (slug: string, categoryId: string): Promise<any[]> =>
             apiRequest(`/arm-admin/${slug}/categories/${categoryId}/units`),
 
+        ad:{
+            getAds: (params: any): Promise<any> =>
+                apiRequest('/arm-admin/ads', { params }),
+            updateAdStatus: (adId: string, status: string): Promise<any> =>
+                apiRequest(`/arm-admin/ads/${adId}/status`, { method: 'PUT', data: { status } }),
+            deleteAd: (adId: string): Promise<any> =>
+                apiRequest(`/arm-admin/ads/${adId}`, { method: 'DELETE' }),
+            getAdDetail: (adId: string): Promise<any> =>
+                apiRequest(`/arm-admin/ads/${adId}`),
+            approveAd: (adId: string): Promise<any> =>  // ✅ اضافه شد
+                apiRequest(`/arm-admin/ads/${adId}/approve`, { method: 'POST' }),
+            rejectAd: (adId: string, reason: string): Promise<any> =>  // ✅ اضافه شد
+                apiRequest(`/arm-admin/ads/${adId}/reject`, { method: 'POST', data: { reason } }),
+        },
+
         // ============================================================
         // مدیریت اعضا
         // ============================================================
@@ -555,6 +570,7 @@ export const apiService = {
                     apiRequest(`/arm-admin/${slug}/members/${userId}`),
 
         },
+
 
     },
 

@@ -38,11 +38,19 @@ export default function EditAdPage() {
     const [formData, setFormData] = useState<any>(null);
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
-    const [showMoreSettings, setShowMoreSettings] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
 
     const unitShortCode = ad?.unit?.shortCode || 'تن';
     const alreadyBumped = ad?.isBumped || false;
+    const bumpExpiresAt = ad?.bumpExpiresAt ? new Date(ad.bumpExpiresAt) : null;
+    // ✅ نمایش تاریخ و ساعت پایان نردبان
+    const bumpExpiresAtLabel = bumpExpiresAt ? bumpExpiresAt.toLocaleDateString('fa-IR', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+    }) : '';
 
     // Initialize form when ad loads
     useEffect(() => {
@@ -281,6 +289,80 @@ export default function EditAdPage() {
                             </div>
                         </div>
 
+                        {/* ✅ تنظیمات انتشار (جایگزین تنظیمات پیشرفته) */}
+                        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 shadow-sm space-y-4">
+                            <div>
+                                <label className="text-xs font-medium text-gray-600 dark:text-gray-400 block mb-1">
+                                    <Clock className="w-3.5 h-3.5 inline-block ml-1" />
+                                    مدت اعتبار قیمت
+                                </label>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {validityOptions.map(opt => (
+                                        <button
+                                            key={opt.value}
+                                            type="button"
+                                            onClick={() => setFormData(prev => ({ ...prev, validityHours: opt.value }))}
+                                            className={cn(
+                                                "py-2 rounded-lg text-sm font-medium border-2 transition-all",
+                                                formData.validityHours === opt.value
+                                                    ? "border-primary bg-primary/10 text-primary"
+                                                    : "border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-primary/30"
+                                            )}
+                                        >
+                                            {opt.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className={cn(
+                                "flex items-center justify-between p-3 bg-surface-container-lowest dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg",
+                                alreadyBumped && "opacity-70"
+                            )}>
+                                <div>
+                                    <span className="text-sm font-medium text-on-surface dark:text-gray-200">نردبان (بالاترین نمایش)</span>
+                                    <p className="text-[11px] text-gray-500">
+                                        {alreadyBumped ? (
+                                            <>تا تاریخ <span className="font-bold text-primary">{bumpExpiresAtLabel}</span> فعال است</>
+                                        ) : (
+                                            'مصرف ۱۰ اعتبار'
+                                        )}
+                                    </p>
+                                </div>
+                                {alreadyBumped ? (
+                                    <span className="flex items-center gap-1 text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded-full">
+                                        <TrendingUp className="w-3.5 h-3.5" />
+                                        فعال
+                                    </span>
+                                ) : (
+                                    <label className="relative inline-flex items-center cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={formData.isBumped}
+                                            onChange={(e) => setFormData(prev => ({ ...prev, isBumped: e.target.checked }))}
+                                            className="sr-only peer"
+                                        />
+                                        <div className="w-10 h-6 bg-gray-200 dark:bg-gray-700 rounded-full peer-checked:bg-primary transition-colors" />
+                                        <div className="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow peer-checked:translate-x-4 transition-transform" />
+                                    </label>
+                                )}
+                            </div>
+
+                            <label className="flex items-center justify-between cursor-pointer select-none">
+                                <span className="text-sm font-medium text-on-surface dark:text-gray-200">انتشار ناشناس</span>
+                                <div className="relative">
+                                    <input
+                                        type="checkbox"
+                                        checked={formData.isAnonymous}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, isAnonymous: e.target.checked }))}
+                                        className="sr-only peer"
+                                    />
+                                    <div className="w-10 h-6 bg-gray-200 dark:bg-gray-700 rounded-full peer-checked:bg-primary transition-colors" />
+                                    <div className="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow peer-checked:translate-x-4 transition-transform" />
+                                </div>
+                            </label>
+                        </div>
+
                         {/* موقعیت و توضیحات */}
                         <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 shadow-sm space-y-4">
                             <div>
@@ -317,87 +399,6 @@ export default function EditAdPage() {
                                     {formData.description.length > 0 ? `${formData.description.length} کاراکتر` : 'اختیاری'}
                                 </p>
                             </div>
-                        </div>
-
-                        {/* تنظیمات پیشرفته */}
-                        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 shadow-sm">
-                            <button
-                                type="button"
-                                onClick={() => setShowMoreSettings(!showMoreSettings)}
-                                className="w-full flex items-center justify-between text-sm font-medium text-gray-700 dark:text-gray-300"
-                            >
-                                <span>تنظیمات پیشرفته</span>
-                                {showMoreSettings ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                            </button>
-
-                            {showMoreSettings && (
-                                <div className="mt-4 space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                                    <div>
-                                        <label className="text-xs font-medium text-gray-600 dark:text-gray-400 block mb-1">
-                                            <Clock className="w-3.5 h-3.5 inline-block ml-1" />
-                                            مدت اعتبار قیمت
-                                        </label>
-                                        <div className="grid grid-cols-3 gap-2">
-                                            {validityOptions.map(opt => (
-                                                <button
-                                                    key={opt.value}
-                                                    type="button"
-                                                    onClick={() => setFormData(prev => ({ ...prev, validityHours: opt.value }))}
-                                                    className={cn(
-                                                        "py-2 rounded-lg text-sm font-medium border-2 transition-all",
-                                                        formData.validityHours === opt.value
-                                                            ? "border-primary bg-primary/10 text-primary"
-                                                            : "border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-primary/30"
-                                                    )}
-                                                >
-                                                    {opt.label}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    <div className={cn(
-                                        "flex items-center justify-between p-3 bg-surface-container-lowest dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg",
-                                        alreadyBumped && "opacity-70"
-                                    )}>
-                                        <div>
-                                            <span className="text-sm font-medium text-on-surface dark:text-gray-200">نردبان (بالاترین نمایش)</span>
-                                            <p className="text-[11px] text-gray-500">مصرف ۱۰ اعتبار</p>
-                                        </div>
-                                        {alreadyBumped ? (
-                                            <span className="flex items-center gap-1 text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded-full">
-                                                <TrendingUp className="w-3.5 h-3.5" />
-                                                فعال
-                                            </span>
-                                        ) : (
-                                            <label className="relative inline-flex items-center cursor-pointer">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={formData.isBumped}
-                                                    onChange={(e) => setFormData(prev => ({ ...prev, isBumped: e.target.checked }))}
-                                                    className="sr-only peer"
-                                                />
-                                                <div className="w-10 h-6 bg-gray-200 dark:bg-gray-700 rounded-full peer-checked:bg-primary transition-colors" />
-                                                <div className="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow peer-checked:translate-x-4 transition-transform" />
-                                            </label>
-                                        )}
-                                    </div>
-
-                                    <label className="flex items-center justify-between cursor-pointer select-none">
-                                        <span className="text-sm font-medium text-on-surface dark:text-gray-200">انتشار ناشناس</span>
-                                        <div className="relative">
-                                            <input
-                                                type="checkbox"
-                                                checked={formData.isAnonymous}
-                                                onChange={(e) => setFormData(prev => ({ ...prev, isAnonymous: e.target.checked }))}
-                                                className="sr-only peer"
-                                            />
-                                            <div className="w-10 h-6 bg-gray-200 dark:bg-gray-700 rounded-full peer-checked:bg-primary transition-colors" />
-                                            <div className="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow peer-checked:translate-x-4 transition-transform" />
-                                        </div>
-                                    </label>
-                                </div>
-                            )}
                         </div>
 
                         {/* دکمه‌های عملیاتی */}

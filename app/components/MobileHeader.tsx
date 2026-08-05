@@ -77,7 +77,8 @@ export default function MobileHeader({ showLocation = false, showBack = false, f
     const showJoin = isHomePage && (!isAuthenticated || !isMember) && !armsLoading;
 
     return (
-        <header className="z-40 bg-white dark:bg-gray-900 border-b border-outline-variant/20 dark:border-gray-800">
+        // ✅ تنها تغییر مهم در این خط است: اضافه شدن sticky top-0 با شرط fixed
+        <header className={`lg:hidden z-40 bg-white dark:bg-gray-900 border-b border-outline-variant/20 dark:border-gray-800 ${fixed ? 'sticky top-0' : ''}`}>
             <div className="flex items-center justify-between px-4 h-16">
                 <div className="flex items-center gap-2.5 flex-1 min-w-0">
                     {showBack && (
@@ -108,7 +109,6 @@ export default function MobileHeader({ showLocation = false, showBack = false, f
                     {/* <button onClick={handleSupportClick} className="p-2 text-gray-400 hover:text-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
                         <Headphones className="w-5 h-5" />
                     </button>*/}
-
                 </div>
             </div>
         </header>

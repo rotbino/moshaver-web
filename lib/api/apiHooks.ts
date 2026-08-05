@@ -56,11 +56,16 @@ export const useActiveBusiness = () => {
     });
 };
 
+
 export const useBusiness = (id: string) => {
     return useQuery({
         queryKey: ['business', id],
         queryFn: () => apiService.business.getOne(id),
         enabled: !!id,
+        // ✅ تنظیمات جدید برای رفرش خودکار در هر بار ورود به صفحه
+        staleTime: 0,              // داده‌ها را فوراً "کهنه" فرض کن
+        refetchOnMount: true,     // با هر بار مونت شدن کامپوننت، درخواست جدید بفرست
+        refetchOnWindowFocus: true, // حتی اگر کاربر از تب دیگر برگردد، رفرش شود
     });
 };
 
